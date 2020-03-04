@@ -13,6 +13,14 @@ class InfinibandCollector(object):
         self.input_file = input_file
         self.node_name_map = node_name_map
 
+        self.node_name = {}
+        if self.node_name_map:
+            with open(self.node_name_map) as f:
+                for line in f:
+                    m = re.search(r'(?P<GUID>0x.*)\s+"(?P<name>.*)"', line)
+                    if m:
+                        self.node_name[m.group(1)] = m.group(2)
+
         self.metrics = {}
 
         # Description based on https://community.mellanox.com/s/article/understanding-mlx5-linux-counters-and-status-parameters # noqa: E501
@@ -165,13 +173,24 @@ class InfinibandCollector(object):
         return counters
 
     def reset_counter(self, guid, port, reason):
+        if guid in self.node_name:
+            switch_name = self.node_name[guid]
+        else:
+            switch_name = guid
+
         if self.can_reset_counter:
-            print('Reseting counters on {guid} port {port} due to {r}'.format(
-                guid=guid,
+            print('Reseting counters on "{sw}" port {port} due to {r}'.format(
+                sw=switch_name,
                 port=port,
                 r=reason
             ))
             subprocess.run(['perfquery', '-R', '-G', guid, port], check=True)
+        else:
+            print('Counters on "{sw}" port {port} is maxed out on {r}'.format(
+                sw=switch_name,
+                port=port,
+                r=reason
+            ))
 
     def parse_switch(self, switch_name, port, link):
         m_port = re.search(r'GUID (0x.*) port (\d+):(.*)', port)
