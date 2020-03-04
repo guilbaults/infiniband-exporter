@@ -3,7 +3,7 @@ import time
 import argparse
 import subprocess
 
-from prometheus_client.core import REGISTRY, CounterMetricFamily
+from prometheus_client.core import REGISTRY, CounterMetricFamily, GaugeMetricFamily
 from prometheus_client import start_http_server
 
 
@@ -194,6 +194,8 @@ class InfinibandCollector(object):
 
     def parse_switch(self, switch_name, port, link):
         m_port = re.search(r'GUID (0x.*) port (\d+):(.*)', port)
+        guid = m_port.group(1)
+        port = m_port.group(2)
         counters = self.parse_counter(m_port.group(3))
 
         if 'Active' in link:
@@ -202,9 +204,24 @@ class InfinibandCollector(object):
                 pass
             else:
                 m_link = re.search(r'Link info:\s+(?P<LID>\d+)\s+(?P<port>\d+).*(?P<width>\d)X\s+(?P<speed>[\d+\.]*) Gbps Active\/  LinkUp.*(?P<remote_GUID>0x\w+)\s+(?P<remote_LID>\d+)\s+(?P<remote_port>\d+).*\"(?P<node_name>.*)\"', link)  # noqa: E501
+                self.metrics['speed'].add_metric([
+                    switch_name,
+                    guid,
+                    port,
+                    m_link.group('remote_GUID'),
+                    m_link.group('remote_port'),
+                    m_link.group('node_name')],
+                    m_link.group('speed'))
+                self.metrics['width'].add_metric([
+                    switch_name,
+                    guid,
+                    port,
+                    m_link.group('remote_GUID'),
+                    m_link.group('remote_port'),
+                    m_link.group('node_name')],
+                    m_link.group('width'))
+
                 for counter in self.counter_info.keys():
-                    guid = m_port.group(1)
-                    port = m_port.group(2)
                     self.metrics[counter].add_metric([
                         switch_name,
                         guid,
@@ -224,7 +241,7 @@ class InfinibandCollector(object):
     def collect(self):
         ibqueryerrors = ""
         if self.input_file:
-            with open('ibqueryerrors_switch.log') as f:
+            with open(self.input_file) as f:
                 ibqueryerrors = f.read()
         else:
             ibqueryerrors_args = [
@@ -249,6 +266,28 @@ class InfinibandCollector(object):
 
         switches = self.chunks(content, 3)
 
+        self.metrics['speed'] = GaugeMetricFamily(
+            'infiniband_speed',
+            'Negociated link speed',
+            labels=[
+                'local_name',
+                'local_guid',
+                'local_port',
+                'remote_guid',
+                'remote_port',
+                'remote_name'
+            ])
+        self.metrics['width'] = GaugeMetricFamily(
+            'infiniband_width',
+            'Negociated link width',
+            labels=[
+                'local_name',
+                'local_guid',
+                'local_port',
+                'remote_guid',
+                'remote_port',
+                'remote_name'
+            ])
         for counter_name in self.counter_info:
             self.metrics[counter_name] = CounterMetricFamily(
                 'infiniband_' + counter_name.lower(),
@@ -270,6 +309,8 @@ class InfinibandCollector(object):
 
         for counter_name in self.counter_info.keys():
             yield self.metrics[counter_name]
+        yield self.metrics['speed']
+        yield self.metrics['width']
 
 
 if __name__ == '__main__':
