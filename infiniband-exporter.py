@@ -233,7 +233,7 @@ class InfinibandCollector(object):
                         m_link.group('node_name')],
                         counters[counter])
 
-                    if counters[counter] >= 2 ** self.counter_info[counter]['bits']:  # noqa: E501
+                    if counters[counter] >= 2 ** (self.counter_info[counter]['bits'] - 1):  # noqa: E501
                         self.reset_counter(guid, port, counter)
         elif 'Down' in link:
             pass
