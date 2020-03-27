@@ -2,6 +2,7 @@ import re
 import time
 import argparse
 import subprocess
+import os
 
 from prometheus_client.core import REGISTRY, CounterMetricFamily, \
     GaugeMetricFamily
@@ -10,9 +11,19 @@ from prometheus_client import start_http_server
 
 class InfinibandCollector(object):
     def __init__(self, can_reset_counter, input_file, node_name_map):
-        self.can_reset_counter = can_reset_counter
+        if can_reset_counter:
+            self.can_reset_counter = True
+        elif 'CAN_RESET_COUNTER' in os.environ:
+            self.can_reset_counter = True
+        else:
+            self.can_reset_counter = False
+
         self.input_file = input_file
-        self.node_name_map = node_name_map
+
+        if node_name_map:
+            self.node_name_map = node_name_map
+        elif 'NODE_NAME_MAP' in os.environ:
+            self.node_name_map = os.environ['NODE_NAME_MAP']
 
         self.node_name = {}
         if self.node_name_map:
@@ -316,7 +327,8 @@ if __name__ == '__main__':
     parser.add_argument(
         '--can-reset-counter',
         dest='can_reset_counter',
-        help='Will reset counter as required when maxed out',
+        help='Will reset counter as required when maxed out. Can also be \
+set with env variable CAN_RESET_COUNTER',
         action='store_true')
     parser.add_argument(
         '--from-file',
@@ -328,7 +340,8 @@ empty, ibqueryerrors will be launched as needed by this collector')
         '--node-name-map',
         action='store',
         dest='node_name_map',
-        help='Node name map used by ibqueryerrors')
+        help='Node name map used by ibqueryerrors. Ccan also be set with env \
+var NODE_NAME_MAP')
 
     args = parser.parse_args()
 
