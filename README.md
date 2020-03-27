@@ -9,8 +9,8 @@ This exporter takes 3 seconds to collect the information of 60+ IB switches, and
 
 ## Requirements
 
-* Python >= 3.6
- * prometheus-client==0.7.1
+* Python
+ * prometheus-client
 * `ibqueryerrors`
 
 ## Usage
