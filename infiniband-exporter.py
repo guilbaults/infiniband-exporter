@@ -204,7 +204,9 @@ class InfinibandCollector(object):
                 port=port,
                 r=reason
             ))
-            subprocess.run(['perfquery', '-R', '-G', guid, port], check=True)
+            process = subprocess.Popen(['perfquery', '-R', '-G', guid, port],
+                                       stdout=subprocess.PIPE)
+            process.communicate()
         else:
             print('Counters on "{sw}" port {port} is maxed out on {r}'.format(
                 sw=switch_name,
