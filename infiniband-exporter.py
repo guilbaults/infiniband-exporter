@@ -176,9 +176,9 @@ class InfinibandCollector(object):
             }
         }
 
-    def chunks(self, l, n):
-        for i in range(0, len(l), n):
-            yield l[i:i + n]
+    def chunks(self, x, n):
+        for i in range(0, len(x), n):
+            yield x[i:i + n]
 
     def parse_counter(self, s):
         counters = {}
