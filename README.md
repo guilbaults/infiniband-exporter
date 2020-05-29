@@ -3,7 +3,7 @@ Prometheus exporter for a Infiniband fabric. This exporter only need to be insta
 
 Metrics are identified by type, port number, switch GUID and name. The remote connection of each port is also collected. Thus each metric represents a cable between 2 switches, or between a switch and a card in a server. 
 
-When a node name map file is provided, it will be used by `ibquerryerror` to put a more human friendly name on switches. 
+When a node name map file is provided, it will be used by `ibqueryerrors` to put a more human friendly name on switches. 
 
 This exporter takes 3 seconds to collect the information of 60+ IB switches, and 900+ compute nodes. The information takes about 7.5MB in ASCII format for that fabric.
 
