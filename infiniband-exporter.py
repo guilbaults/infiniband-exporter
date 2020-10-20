@@ -20,7 +20,7 @@ class InfinibandCollector(object):
 
         self.input_file = input_file
         self.node_name_map = node_name_map
-        
+
         if 'NODE_NAME_MAP' in os.environ:
             self.node_name_map = os.environ['NODE_NAME_MAP']
 
