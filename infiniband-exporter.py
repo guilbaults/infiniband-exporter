@@ -3,6 +3,7 @@ import time
 import argparse
 import subprocess
 import os
+import sys
 
 from prometheus_client.core import REGISTRY, CounterMetricFamily, \
     GaugeMetricFamily
@@ -317,6 +318,30 @@ class InfinibandCollector(object):
             yield self.metrics[gauge_name]
 
 
+# stolen from stackoverflow (http://stackoverflow.com/a/377028)
+def which(program):
+    """
+    Python implementation of the which command
+    """
+    def is_exe(fpath):
+        """ helper """
+        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
+    fpath, _ = os.path.split(program)
+    if fpath:
+        if is_exe(program):
+            return program
+    else:
+        paths = os.getenv("PATH", "/usr/bin:/usr/sbin:/sbin:/bin")
+
+        for path in paths.split(os.pathsep):
+            exe_file = os.path.join(path, program)
+            if is_exe(exe_file):
+                return exe_file
+
+    return None
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Prometheus collector for a infiniband fabric')
@@ -345,6 +370,10 @@ empty, ibqueryerrors will be launched as needed by this collector')
 var NODE_NAME_MAP')
 
     args = parser.parse_args()
+
+    if not which("ibqueryerrors"):
+        print('Cannot find an executable ibqueryerrors binary in PATH')
+        sys.exit(1)
 
     start_http_server(args.port)
     REGISTRY.register(InfinibandCollector(
