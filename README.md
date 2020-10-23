@@ -7,6 +7,8 @@ When a node name map file is provided, it will be used by `ibqueryerrors` to put
 
 This exporter takes 3 seconds to collect the information of 60+ IB switches, and 900+ compute nodes. The information takes about 7.5MB in ASCII format for that fabric.
 
+[Grafana dashboard example](https://grafana.com/grafana/dashboards/13260)
+
 ## Requirements
 
 * Python
