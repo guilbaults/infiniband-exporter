@@ -225,7 +225,7 @@ class InfinibandCollector(object):
                 # Internal IB port for the SM, ignore it
                 pass
             else:
-                m_link = re.search(r'Link info:\s+(?P<LID>\d+)\s+(?P<port>\d+).*(?P<Width>\d)X\s+(?P<Speed>[\d+\.]*) Gbps Active\/  LinkUp.*(?P<remote_GUID>0x\w+)\s+(?P<remote_LID>\d+)\s+(?P<remote_port>\d+).*\"(?P<node_name>.*)\"', link)  # noqa: E501
+                m_link = re.search(r'Link info:\s+(?P<LID>\d+)\s+(?P<port>\d+).*(?P<Width>\d)X\s+(?P<Speed>[\d+\.]*) Gbps.* Active\/  LinkUp.*(?P<remote_GUID>0x\w+)\s+(?P<remote_LID>\d+)\s+(?P<remote_port>\d+).*\"(?P<node_name>.*)\"', link)  # noqa: E501
                 for gauge in self.gauge_info.keys():
                     self.metrics[gauge].add_metric([
                         switch_name,
