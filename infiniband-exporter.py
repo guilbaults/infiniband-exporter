@@ -263,7 +263,7 @@ class InfinibandCollector(object):
         scrape_start = time.time()
         scrape_ok = GaugeMetricFamily(
             'infiniband_scrape_ok',
-            'Indicate with a 1 if the scrape is valid')
+            'Indicate with a 1 if the scrape is valid, otherwise 0')
 
         ibqueryerrors = ""
         if self.input_file:
