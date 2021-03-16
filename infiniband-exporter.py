@@ -5,9 +5,9 @@ import subprocess
 import os
 import sys
 
-from prometheus_client.core import REGISTRY, CounterMetricFamily, \
-    GaugeMetricFamily
-from prometheus_client import start_http_server
+from prometheus_client.core import CounterMetricFamily, GaugeMetricFamily
+from prometheus_client import make_wsgi_app
+from wsgiref.simple_server import make_server, WSGIRequestHandler
 
 
 class InfinibandCollector(object):
@@ -254,6 +254,17 @@ class InfinibandCollector(object):
             print('Unknown link state')
 
     def collect(self):
+        ibqueryerrors_duration = GaugeMetricFamily(
+            'infiniband_ibqueryerrors_duration_seconds',
+            'Number of seconds taken to run ibqueryerrors')
+        scrape_duration = GaugeMetricFamily(
+            'infiniband_scrape_duration_seconds',
+            'Number of seconds taken to collect and parse the stats')
+        scrape_start = time.time()
+        scrape_ok = GaugeMetricFamily(
+            'infiniband_scrape_ok',
+            'Indicate with a 1 if the scrape is valid, otherwise 0')
+
         ibqueryerrors = ""
         if self.input_file:
             with open(self.input_file) as f:
@@ -270,10 +281,25 @@ class InfinibandCollector(object):
             if self.node_name_map:
                 ibqueryerrors_args.append('--node-name-map')
                 ibqueryerrors_args.append(self.node_name_map)
+            ibqueryerrors_start = time.time()
             process = subprocess.Popen(ibqueryerrors_args,
-                                       stdout=subprocess.PIPE)
-            ibqueryerrors = process.communicate()[0].decode("utf-8")
+                                       stdout=subprocess.PIPE,
+                                       stderr=subprocess.PIPE)
+            ibqueryerrors_command = process.communicate()
+            ibqueryerrors = ibqueryerrors_command[0].decode("utf-8")
 
+            if ibqueryerrors_command[1]:
+                # Got an error
+                print(ibqueryerrors_command[1].decode("utf-8"))
+                scrape_ok.add_metric([], 0)
+                yield scrape_ok
+                return
+            else:
+                scrape_ok.add_metric([], 1)
+                yield scrape_ok
+            ibqueryerrors_duration.add_metric(
+                [], time.time() - ibqueryerrors_start)
+            yield ibqueryerrors_duration
         # need to skip the first empty line
         content = re.split(r'^Errors for (.*) \"(.*)\"',
                            ibqueryerrors,
@@ -317,6 +343,10 @@ class InfinibandCollector(object):
         for gauge_name in self.gauge_info.keys():
             yield self.metrics[gauge_name]
 
+        scrape_duration.add_metric(
+            [], time.time() - scrape_start)
+        yield scrape_duration
+
 
 # stolen from stackoverflow (http://stackoverflow.com/a/377028)
 def which(program):
@@ -340,6 +370,11 @@ def which(program):
                 return exe_file
 
     return None
+
+
+class NoLoggingWSGIRequestHandler(WSGIRequestHandler):
+    def log_message(self, format, *args):
+        pass
 
 
 if __name__ == '__main__':
@@ -375,10 +410,10 @@ var NODE_NAME_MAP')
         print('Cannot find an executable ibqueryerrors binary in PATH')
         sys.exit(1)
 
-    start_http_server(args.port)
-    REGISTRY.register(InfinibandCollector(
+    app = make_wsgi_app(InfinibandCollector(
         args.can_reset_counter,
         args.input_file,
         args.node_name_map))
-    while True:
-        time.sleep(1)
+    httpd = make_server('', args.port, app,
+                        handler_class=NoLoggingWSGIRequestHandler)
+    httpd.serve_forever()
