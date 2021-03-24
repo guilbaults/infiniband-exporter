@@ -21,20 +21,23 @@ Metrics are exported on the chosen HTTP port, events like counter reset will be 
 ```
 usage: infiniband-exporter.py [-h] [--port PORT] [--can-reset-counter]
                               [--from-file INPUT_FILE]
-                              [--node-name-map NODE_NAME_MAP]
+                              [--node-name-map NODE_NAME_MAP] [--verbose]
 
 Prometheus collector for a infiniband fabric
 
 optional arguments:
   -h, --help            show this help message and exit
   --port PORT           Collector http port, default is 9683
-  --can-reset-counter   Will reset counter as required when maxed out
+  --can-reset-counter   Will reset counter as required when maxed out. Can
+                        also be set with env variable CAN_RESET_COUNTER
   --from-file INPUT_FILE
                         Read a file containing the output of ibqueryerrors, if
                         left empty, ibqueryerrors will be launched as needed
                         by this collector
   --node-name-map NODE_NAME_MAP
-                        Node name map used by ibqueryerrors
+                        Node name map used by ibqueryerrors. Can also be set
+                        with env var NODE_NAME_MAP
+  --verbose             increase output verbosity
 ```
 # Sample
 ```
