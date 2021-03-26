@@ -4,6 +4,7 @@ import argparse
 import subprocess
 import os
 import sys
+import logging
 
 from prometheus_client.core import CounterMetricFamily, GaugeMetricFamily
 from prometheus_client import make_wsgi_app
@@ -199,7 +200,7 @@ class InfinibandCollector(object):
             switch_name = guid
 
         if self.can_reset_counter:
-            print('Reseting counters on "{sw}" port {port} due to {r}'.format(
+            logging.info('Reseting counters on "{sw}" port {port} due to {r}'.format(
                 sw=switch_name,
                 port=port,
                 r=reason
@@ -208,7 +209,7 @@ class InfinibandCollector(object):
                                        stdout=subprocess.PIPE)
             process.communicate()
         else:
-            print('Counters on "{sw}" port {port} is maxed out on {r}'.format(
+            logging.warning('Counters on "{sw}" port {port} is maxed out on {r}'.format(
                 sw=switch_name,
                 port=port,
                 r=reason
@@ -251,9 +252,10 @@ class InfinibandCollector(object):
         elif 'Down' in link:
             pass
         else:
-            print('Unknown link state')
+            logging.error('Unknown link state on guid={} port={}'.format(guid, port))
 
     def collect(self):
+        logging.debug('Start of collection cycle')
         ibqueryerrors_duration = GaugeMetricFamily(
             'infiniband_ibqueryerrors_duration_seconds',
             'Number of seconds taken to run ibqueryerrors')
@@ -290,7 +292,7 @@ class InfinibandCollector(object):
 
             if ibqueryerrors_command[1]:
                 # Got an error
-                print(ibqueryerrors_command[1].decode("utf-8"))
+                logging.error(ibqueryerrors_command[1].decode("utf-8"))
                 scrape_ok.add_metric([], 0)
                 yield scrape_ok
                 return
@@ -346,7 +348,7 @@ class InfinibandCollector(object):
         scrape_duration.add_metric(
             [], time.time() - scrape_start)
         yield scrape_duration
-
+        logging.debug('End of collection cycle')
 
 # stolen from stackoverflow (http://stackoverflow.com/a/377028)
 def which(program):
@@ -401,13 +403,20 @@ empty, ibqueryerrors will be launched as needed by this collector')
         '--node-name-map',
         action='store',
         dest='node_name_map',
-        help='Node name map used by ibqueryerrors. Ccan also be set with env \
+        help='Node name map used by ibqueryerrors. Can also be set with env \
 var NODE_NAME_MAP')
+    parser.add_argument("--verbose", help="increase output verbosity",
+                        action="store_true")
 
     args = parser.parse_args()
 
+    if args.verbose:
+        logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+    else:
+        logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
     if not which("ibqueryerrors"):
-        print('Cannot find an executable ibqueryerrors binary in PATH')
+        logging.critical('Cannot find an executable ibqueryerrors binary in PATH')
         sys.exit(1)
 
     app = make_wsgi_app(InfinibandCollector(
