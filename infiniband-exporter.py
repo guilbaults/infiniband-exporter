@@ -255,7 +255,7 @@ class InfinibandCollector(object):
             logging.error('Unknown link state on guid={} port={}'.format(guid, port))
 
     def collect(self):
-        logging.debug('Starting a collection cycle')
+        logging.debug('Start of collection cycle')
         ibqueryerrors_duration = GaugeMetricFamily(
             'infiniband_ibqueryerrors_duration_seconds',
             'Number of seconds taken to run ibqueryerrors')
