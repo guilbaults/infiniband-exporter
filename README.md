@@ -21,7 +21,8 @@ Metrics are exported on the chosen HTTP port, events like counter reset will be 
 ```
 usage: infiniband-exporter.py [-h] [--port PORT] [--can-reset-counter]
                               [--from-file INPUT_FILE]
-                              [--node-name-map NODE_NAME_MAP] [--verbose]
+                              [--node-name-map NODE_NAME_MAP]
+                              [--ca_name CA_NAME] [--verbose]
 
 Prometheus collector for a infiniband fabric
 
@@ -37,9 +38,19 @@ optional arguments:
   --node-name-map NODE_NAME_MAP
                         Node name map used by ibqueryerrors. Can also be set
                         with env var NODE_NAME_MAP
+  --ca_name CA_NAME     ibqueryerrors ca_name for different infiniband ports
   --verbose             increase output verbosity
 ```
-# Sample
+## Daemon configuration
+When using the RPM, some parameters can be set in a file so systemd will pass them to the daemon (`infiniband-exporter`).
+
+```
+cat /etc/sysconfig/infiniband-exporter.conf
+NODE_NAME_MAP=/etc/node-name-map
+CAN_RESET_COUNTER=TRUE
+```
+
+## Metrics example
 ```
 # HELP infiniband_linkdownedcounter_total Total number of times the Port Training state machine has failed the link error recovery process and downed the link.
 # TYPE infiniband_linkdownedcounter_total counter
