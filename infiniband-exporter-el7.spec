@@ -1,6 +1,6 @@
 Name:	  infiniband-exporter
-Version:  0.0.2
-%global gittag 0.0.2
+Version:  0.0.3
+%global gittag 0.0.3
 Release:  1%{?dist}
 Summary:  Prometheus exporter for a Infiniband Fabric
 
@@ -44,6 +44,11 @@ rm -rf $RPM_BUILD_ROOT
 %{_unitdir}/infiniband-exporter.service
 
 %changelog
+* Fri Apr 09 2021 Simon Guilbault <simon.guilbault@calculquebec.ca> 0.0.3-1
+- Adding ca_name option
+- Adding a real logging output instead of print()
+- Adding scrape duration and status
+- Detect when ibqueryerrors is not executable
 * Mon Mar 30 2020 Simon Guilbault <simon.guilbault@calculquebec.ca> 0.0.2-1
 - Fixing counter reset using python subprocess.Popen()
 * Fri Mar 20 2020 Simon Guilbault <simon.guilbault@calculquebec.ca> 0.0.1-1
