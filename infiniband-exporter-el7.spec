@@ -32,7 +32,7 @@ This exporter takes 3 seconds to collect the information of 60+ IB switches, and
 mkdir -p %{buildroot}/%{_bindir}
 mkdir -p %{buildroot}/%{_unitdir}
 
-sed -i -e '1i#!/usr/bin/python' infiniband-exporter.py
+sed -i -e 's$#!/usr/bin/env python3$#!/usr/bin/python2$g' infiniband-exporter.py
 install -m 0755 %{name}.py %{buildroot}/%{_bindir}/%{name}
 install -m 0644 infiniband-exporter.service %{buildroot}/%{_unitdir}/infiniband-exporter.service
 
