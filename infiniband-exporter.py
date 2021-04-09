@@ -13,18 +13,9 @@ from wsgiref.simple_server import make_server, WSGIRequestHandler
 
 class InfinibandCollector(object):
     def __init__(self, can_reset_counter, input_file, node_name_map):
-        if can_reset_counter:
-            self.can_reset_counter = True
-        elif 'CAN_RESET_COUNTER' in os.environ:
-            self.can_reset_counter = True
-        else:
-            self.can_reset_counter = False
-
+        self.can_reset_counter = can_reset_counter
         self.input_file = input_file
         self.node_name_map = node_name_map
-
-        if 'NODE_NAME_MAP' in os.environ:
-            self.node_name_map = os.environ['NODE_NAME_MAP']
 
         self.node_name = {}
         if self.node_name_map:
@@ -426,10 +417,30 @@ var NODE_NAME_MAP')
         logging.critical('Cannot find an executable ibqueryerrors binary in PATH')
         sys.exit(1)
 
+    if args.node_name_map:
+        logging.debug('Using node-name-map provided in args: {}'.format(args.node_name_map))
+        node_name_map = args.node_name_map
+    elif 'NODE_NAME_MAP' in os.environ:
+        logging.debug('Using NODE_NAME_MAP provided in env vars: {}'.format(os.environ['NODE_NAME_MAP']))
+        node_name_map = os.environ['NODE_NAME_MAP']
+    else:
+        logging.debug('No node-name-map was provided')
+        node_name_map = None
+
+    if args.can_reset_counter:
+        logging.debug('can_reset_counter provided in args')
+        can_reset_counter = True
+    elif 'CAN_RESET_COUNTER' in os.environ:
+        logging.debug('CAN_RESET_COUNTER provided in env vars')
+        can_reset_counter = True
+    else:
+        logging.debug('Counters will not reset automatically')
+        can_reset_counter = False
+
     app = make_wsgi_app(InfinibandCollector(
-        args.can_reset_counter,
+        can_reset_counter,
         args.input_file,
-        args.node_name_map))
+        node_name_map))
     httpd = make_server('', args.port, app,
                         handler_class=NoLoggingWSGIRequestHandler)
     httpd.serve_forever()
