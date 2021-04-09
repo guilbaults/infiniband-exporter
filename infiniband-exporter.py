@@ -193,7 +193,7 @@ class InfinibandCollector(object):
             switch_name = guid
 
         if self.can_reset_counter:
-            logging.info('Reseting counters on "{sw}" port {port} due to {r}'.format(
+            logging.info('Reseting counters on "{sw}" port {port} due to {r}'.format(  # noqa: E501
                 sw=switch_name,
                 port=port,
                 r=reason
@@ -202,7 +202,7 @@ class InfinibandCollector(object):
                                        stdout=subprocess.PIPE)
             process.communicate()
         else:
-            logging.warning('Counters on "{sw}" port {port} is maxed out on {r}'.format(
+            logging.warning('Counters on "{sw}" port {port} is maxed out on {r}'.format(  # noqa: E501
                 sw=switch_name,
                 port=port,
                 r=reason
@@ -245,7 +245,8 @@ class InfinibandCollector(object):
         elif 'Down' in link:
             pass
         else:
-            logging.error('Unknown link state on guid={} port={}'.format(guid, port))
+            logging.error('Unknown link state on guid={} port={}'.format(
+                guid, port))
 
     def collect(self):
         logging.debug('Start of collection cycle')
@@ -346,6 +347,7 @@ class InfinibandCollector(object):
         yield scrape_duration
         logging.debug('End of collection cycle')
 
+
 # stolen from stackoverflow (http://stackoverflow.com/a/377028)
 def which(program):
     """
@@ -411,19 +413,23 @@ var NODE_NAME_MAP')
     args = parser.parse_args()
 
     if args.verbose:
-        logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+        logging.basicConfig(level=logging.DEBUG,
+                            format='%(asctime)s - %(levelname)s - %(message)s')
     else:
-        logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+        logging.basicConfig(level=logging.INFO,
+                            format='%(asctime)s - %(levelname)s - %(message)s')
 
     if not which("ibqueryerrors"):
-        logging.critical('Cannot find an executable ibqueryerrors binary in PATH')
+        logging.critical('Cannot find an executable ibqueryerrors binary in PATH')  # noqa: E501
         sys.exit(1)
 
     if args.node_name_map:
-        logging.debug('Using node-name-map provided in args: {}'.format(args.node_name_map))
+        logging.debug('Using node-name-map provided in args: {}'.format(
+            args.node_name_map))
         node_name_map = args.node_name_map
     elif 'NODE_NAME_MAP' in os.environ:
-        logging.debug('Using NODE_NAME_MAP provided in env vars: {}'.format(os.environ['NODE_NAME_MAP']))
+        logging.debug('Using NODE_NAME_MAP provided in env vars: {}'.format(
+            os.environ['NODE_NAME_MAP']))
         node_name_map = os.environ['NODE_NAME_MAP']
     else:
         logging.debug('No node-name-map was provided')
