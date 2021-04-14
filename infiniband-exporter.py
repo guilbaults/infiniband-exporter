@@ -288,17 +288,16 @@ class InfinibandCollector(object):
             ibqueryerrors = ibqueryerrors_command[0].decode("utf-8")
 
             if ibqueryerrors_command[1]:
-                # Got an error
                 logging.error(ibqueryerrors_command[1].decode("utf-8"))
                 scrape_ok.add_metric([], 0)
                 yield scrape_ok
-                return
             else:
                 scrape_ok.add_metric([], 1)
                 yield scrape_ok
-            ibqueryerrors_duration.add_metric(
-                [], time.time() - ibqueryerrors_start)
+
+            ibqueryerrors_duration.add_metric([], time.time() - ibqueryerrors_start)
             yield ibqueryerrors_duration
+
         # need to skip the first empty line
         content = re.split(r'^Errors for (.*) \"(.*)\"',
                            ibqueryerrors,
