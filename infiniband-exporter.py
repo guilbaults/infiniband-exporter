@@ -170,6 +170,12 @@ class InfinibandCollector(object):
             }
         }
 
+        self.bad_status_error_metric_name = 'infiniband_bad_status_error'
+        self.bad_status_error_metric_help = 'Detected bad status error catched on stderr of ibqueryerrors'
+        self.bad_status_error_metric_labels = ['path', 'status', 'error']
+        self.bad_status_error_pattern = r'src\/query\_smp\.c\:[\d]+\; (?:mad|umad) \((DR path .*) Attr .*\) bad status ([\d]+); (.*)'
+        self.bad_status_error_prog = re.compile(self.bad_status_error_pattern)
+
     def chunks(self, x, n):
         for i in range(0, len(x), n):
             yield x[i:i + n]
@@ -207,6 +213,41 @@ class InfinibandCollector(object):
                 port=port,
                 r=reason
             ))
+
+    def build_stderr_metrics(self, stderr):
+        logging.debug('Processing stderr errors retrieved by ibqueryerrors')
+
+        bad_status_error_metric = GaugeMetricFamily(
+            self.bad_status_error_metric_name,
+            self.bad_status_error_metric_help,
+            labels=self.bad_status_error_metric_labels)
+
+        stderr_metrics = [bad_status_error_metric]
+        error = False
+
+        for line in stderr.splitlines():
+            logging.debug(f'STDERR line: {line}')
+
+            if self.process_bad_status_error(line, bad_status_error_metric):
+                pass
+            else:
+                if not error:
+                    error = True
+                logging.error(f'Could not process line from STDERR: {line}')
+
+        return stderr_metrics, error
+
+    def process_bad_status_error(self, line, bad_status_error_metric):
+        result = self.bad_status_error_prog.match(line)
+        if result:
+            bad_status_error_metric.add_metric(
+                [result.group(1),   # path
+                result.group(2),    # status
+                result.group(3)],   # error
+                1)
+            return True
+        else:
+            return False
 
     def parse_switch(self, switch_name, port, link):
         m_port = re.search(r'GUID (0x.*) port (\d+):(.*)', port)
@@ -259,12 +300,14 @@ class InfinibandCollector(object):
         scrape_start = time.time()
         scrape_ok = GaugeMetricFamily(
             'infiniband_scrape_ok',
-            'Indicate with a 1 if the scrape is valid, otherwise 0')
+            'Indicate with a 1 if the scrape is valid, otherwise 0 if errors were encountered')
 
-        ibqueryerrors = ""
+        scrape_with_errors = False
+
+        ibqueryerrors_stdout = ""
         if self.input_file:
             with open(self.input_file) as f:
-                ibqueryerrors = f.read()
+                ibqueryerrors_stdout = f.read()
         else:
             ibqueryerrors_args = [
                 'ibqueryerrors',
@@ -284,23 +327,27 @@ class InfinibandCollector(object):
             process = subprocess.Popen(ibqueryerrors_args,
                                        stdout=subprocess.PIPE,
                                        stderr=subprocess.PIPE)
-            ibqueryerrors_command = process.communicate()
-            ibqueryerrors = ibqueryerrors_command[0].decode("utf-8")
+            process_stdout, process_stderr = process.communicate()
+            ibqueryerrors_stdout = process_stdout.decode("utf-8")
 
-            if ibqueryerrors_command[1]:
-                logging.error(ibqueryerrors_command[1].decode("utf-8"))
-                scrape_ok.add_metric([], 0)
-                yield scrape_ok
-            else:
-                scrape_ok.add_metric([], 1)
-                yield scrape_ok
+            if process_stderr:
+                ibqueryerrors_stderr = process_stderr.decode("utf-8")
+                logging.error(ibqueryerrors_stderr)
+
+                stderr_metrics, error = self.build_stderr_metrics(ibqueryerrors_stderr)
+
+                for stderr_metric in stderr_metrics:
+                    yield stderr_metric
+
+                if error:
+                    scrape_with_errors = True
 
             ibqueryerrors_duration.add_metric([], time.time() - ibqueryerrors_start)
             yield ibqueryerrors_duration
 
         # need to skip the first empty line
         content = re.split(r'^Errors for (.*) \"(.*)\"',
-                           ibqueryerrors,
+                           ibqueryerrors_stdout,
                            flags=re.MULTILINE)[1:]
 
         switches = self.chunks(content, 3)
@@ -344,6 +391,13 @@ class InfinibandCollector(object):
         scrape_duration.add_metric(
             [], time.time() - scrape_start)
         yield scrape_duration
+
+        if scrape_with_errors:
+            scrape_ok.add_metric([], 0)
+        else:
+            scrape_ok.add_metric([], 1)
+        yield scrape_ok
+
         logging.debug('End of collection cycle')
 
 
