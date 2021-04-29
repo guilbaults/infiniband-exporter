@@ -1,15 +1,12 @@
-on: [pull_request]
-
+on: push
+name: on push
 jobs:
-  lint:
+  gitHubActionForFlake8:
+    name: GitHub Action for Flake8
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
-      - uses: grantmcconnaughey/lintly-flake8-github-action@v1.0
-        with:
-          # The GitHub API token to create reviews with
-          token: ${{ secrets.GITHUB_TOKEN }}
-          # Fail if "new" violations detected or "any", default "new"
-          failIf: new
-          # Additional arguments to pass to flake8, default "." (current directory)
-          #args: "--ignore=E121,E123 ."
+    - uses: actions/checkout@master
+    - name: GitHub Action for Flake8
+      uses: cclauss/GitHub-Action-for-Flake8@master
+      with:
+        args: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
