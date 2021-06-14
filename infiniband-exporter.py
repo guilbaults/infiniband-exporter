@@ -478,7 +478,11 @@ var NODE_NAME_MAP')
         logging.basicConfig(level=logging.INFO,
                             format='%(asctime)s - %(levelname)s - %(message)s')
 
-    if not which("ibqueryerrors"):
+    if args.input_file and not os.path.isfile(args.input_file):
+        logging.critical("Input file does not exist: %s", args.input_file)
+        sys.exit(1)
+
+    if args.input_file is None and not which("ibqueryerrors"):
         logging.critical('Cannot find an executable ibqueryerrors binary in PATH')  # noqa: E501
         sys.exit(1)
 
