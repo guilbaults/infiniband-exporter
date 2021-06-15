@@ -183,9 +183,6 @@ catched on stderr of ibqueryerrors'
 
     def parse_counter(self, s):
         counters = {}
-        # init all to zero
-        for counter in self.counter_info.keys():
-            counters[counter] = 0
 
         for counter in re.findall(r'\[(.*?)\]', s):
             c = re.search(r'(\w+) == (\d+).*?', counter)
@@ -273,7 +270,7 @@ catched on stderr of ibqueryerrors'
                         m_link.group('node_name')],
                         m_link.group(gauge))
 
-                for counter in self.counter_info.keys():
+                for counter in counters:
                     self.metrics[counter].add_metric([
                         switch_name,
                         guid,
