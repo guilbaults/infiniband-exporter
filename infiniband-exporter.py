@@ -350,11 +350,13 @@ were encountered')
                            flags=re.MULTILINE)
 
         if not content:
-            raise RuntimeError('Split contant from ibqueryerrors_stdout is empty.')
+            raise RuntimeError('Split content from ibqueryerrors_stdout is empty.')
 
-        # Drop first line retrieved from re.split(), if empty.
+        # Drop first line that is empty on successful regex split():
         if content[0] == '':
             del content[0]
+        else:
+            raise RuntimeError("Inconsistent input content detected: {}".format(content[0]))
 
         switches = self.chunks(content, 2)
 
