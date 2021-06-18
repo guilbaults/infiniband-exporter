@@ -385,6 +385,9 @@ were encountered')
 
         for switch in switches:
 
+            if len(switch) != 2:
+                raise RuntimeError('Switch data incomplete: {}'.format(switch[0]))
+
             switch_name = switch[0]
             switch_data = switch[1]
 
