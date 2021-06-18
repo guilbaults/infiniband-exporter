@@ -245,16 +245,20 @@ catched on stderr of ibqueryerrors'
         return stderr_metrics, error
 
     def process_bad_status_error(self, line, bad_status_error_metric):
+
         result = self.bad_status_error_prog.match(line)
+
         if result:
+
             bad_status_error_metric.add_metric(
                 [result.group(1),    # path
                  result.group(2),    # status
                  result.group(3)],   # error
                 1)
+
             return True
-        else:
-            return False
+
+        return False
 
     def init_switch_metrics(self):
 
@@ -284,13 +288,108 @@ catched on stderr of ibqueryerrors'
                     'remote_name'
                 ])
 
+    def process_switch_data(self, content) -> bool:
+        """
+        The method processes switch data.
+
+        Parameters:
+            content (List[str]): Content retrieved from ibqueryerrors STDOUT or from an input file.
+
+        Returns:
+            bool: True on success, otherwise False.
+        """
+
+        if not content:
+            logging.error('Input content is empty.')
+            return False
+
+        if not isinstance(content, list):
+            logging.error('Input content should be a list.')
+            return False
+
+        # Drop first line that is empty on successful regex split():
+        if content[0] == '':
+            del content[0]
+        else:
+            logging.error("Inconsistent input content detected: {}".format(content[0]))
+            return False
+
+        switches = self.chunks(content, 2)
+
+        for switch in switches:
+
+            if len(switch) != 2:
+                logging.error('Switch data incomplete: {}'.format(switch[0]))
+                return False
+
+            switch_name = switch[0]
+            switch_data = switch[1]
+
+            switch_items = switch_data.lstrip().splitlines()
+            switch_all_ports = switch_items[0]
+
+            m_switch_all_ports = self.switch_all_ports_pattern.fullmatch(switch_all_ports)
+
+            # Drop all switch port information,
+            # since it must be ignored for building chunk pairs of specific port with link info.
+            if m_switch_all_ports:
+                del switch_items[0]
+            else:
+                logging.error("Could not find all port information for switch: {}".format(switch_name))
+                return False
+
+            for switch_port_item in self.chunks(switch_items, 2):
+
+                if len(switch_port_item) == 2:
+
+                    port_item, link_item = switch_port_item
+
+                    match_port = self.switch_port_pattern.match(port_item)
+
+                    if match_port:
+
+                        port = int(match_port.group(2))
+
+                        if port > 0:
+
+                            match_link = self.switch_link_pattern.match(link_item)
+
+                            if not match_link:
+                                logging.error('No link info line match for port: {}'.format(port_item))
+                                return False
+
+                            m_active_link = self.switch_active_link_pattern.match(link_item)
+
+                            if m_active_link:
+                                self.parse_switch(switch_name, match_port, m_active_link)
+
+                    elif not port_item or "##" in port_item:
+
+                        if 'GUID' in switch_port_item[1] or 'Link info' in switch_port_item[1]:
+                            logging.error('Inconsistent switch data found:\nItem[0]: {}\nItem[1]: {}'.
+                                          format(switch_port_item[0], switch_port_item[1]))
+                            return False
+
+                        continue
+                    else:
+                        logging.error('Inconsistent switch data found:\nItem[0]: {}\nItem[1]: {}'.
+                                      format(switch_port_item[0], switch_port_item[1]))
+                        return False
+
+                else:
+                    if 'GUID' in switch_port_item[0] or 'Link info' in switch_port_item[0]:
+                        logging.error('Inconsistent switch data found: {}'.format(switch_port_item[0]))
+                        return False
+
+        return True
+
     def parse_switch(self, switch_name, match_port, match_link):
 
         guid = match_port.group(1)
         port = match_port.group(2)
         counters = self.parse_counter(match_port.group(3))
 
-        for gauge in self.gauge_info.keys():
+        for gauge in self.gauge_info:
             self.metrics[gauge].add_metric([
                 switch_name,
                 guid,
@@ -363,6 +462,7 @@ were encountered')
                 ibqueryerrors_stderr = process_stderr.decode("utf-8")
                 logging.error(ibqueryerrors_stderr)
 
+
                 stderr_metrics, error = self.build_stderr_metrics(
                     ibqueryerrors_stderr)
 
@@ -381,81 +481,15 @@ were encountered')
                            ibqueryerrors_stdout,
                            flags=re.MULTILINE)
 
-        if not content:
-            raise RuntimeError('Split content from ibqueryerrors_stdout is empty.')
-
-        # Drop first line that is empty on successful regex split():
-        if content[0] == '':
-            del content[0]
+        if self.process_switch_data(content):
+            for counter_name in self.counter_info:
+                yield self.metrics[counter_name]
+            for gauge_name in self.gauge_info:
+                yield self.metrics[gauge_name]
         else:
-            raise RuntimeError("Inconsistent input content detected: {}".format(content[0]))
+            scrape_with_errors = True
 
-        switches = self.chunks(content, 2)
-
-        for switch in switches:
-
-            if len(switch) != 2:
-                raise RuntimeError('Switch data incomplete: {}'.format(switch[0]))
-
-            switch_name = switch[0]
-            switch_data = switch[1]
-
-            switch_items = switch_data.lstrip().splitlines()
-            switch_all_ports = switch_items[0]
-
-            m_switch_all_ports = self.switch_all_ports_pattern.fullmatch(switch_all_ports)
-
-            # Drop all switch port information,
-            # since it must be ignored for building chunk pairs of specific port with link info.
-            if m_switch_all_ports:
-                del switch_items[0]
-            else:
-                raise RuntimeError("Could not find all port information for switch: {}".format(switch_name))
-
-            for switch_port_item in self.chunks(switch_items, 2):
-
-                if len(switch_port_item) == 2:
-
-                    port_item, link_item = switch_port_item
-
-                    match_port = self.switch_port_pattern.match(port_item)
-
-                    if match_port:
-
-                        port = int(match_port.group(2))
-
-                        if port > 0:
-
-                            match_link = self.switch_link_pattern.match(link_item)
-
-                            if not match_link:
-                                raise RuntimeError('No link info line match for port: {}'.format(port_item))
-
-                            m_active_link = self.switch_active_link_pattern.match(link_item)
-
-                            if m_active_link:
-                                self.parse_switch(switch_name, match_port, m_active_link)
-
-                    elif not port_item or "##" in port_item:
-
-                        if 'GUID' in switch_port_item[1] or 'Link info' in switch_port_item[1]:
-                            raise RuntimeError('Inconsistent switch data.')
-
-                        continue
-                    else:
-                        raise RuntimeError('Inconsistent switch data.')
-
-                else:
-                    if 'GUID' in switch_port_item[0] or 'Link info' in switch_port_item[0]:
-                        raise RuntimeError('Inconsistent switch data.')
-
-        for counter_name in self.counter_info.keys():
-            yield self.metrics[counter_name]
-        for gauge_name in self.gauge_info.keys():
-            yield self.metrics[gauge_name]
-
-        scrape_duration.add_metric(
-            [], time.time() - scrape_start)
+        scrape_duration.add_metric([], time.time() - scrape_start)
         yield scrape_duration
 
         if scrape_with_errors:
