@@ -177,12 +177,13 @@ catched on stderr of ibqueryerrors'
         self.bad_status_error_pattern = r'src\/query\_smp\.c\:[\d]+\; (?:mad|umad) \((DR path .*) Attr .*\) bad status ([\d]+); (.*)'  # noqa: E501
         self.bad_status_error_prog = re.compile(self.bad_status_error_pattern)
 
-        self.pattern_switch_all_ports = re.compile(r'GUID 0[x][\da-f]+ port ALL: (?:\[.*\])+')
+        self.switch_header_regex_str = r'^Errors for (.*) \"(.*)\"'
+        self.switch_all_ports_pattern = re.compile(r'GUID 0[x][\da-f]+ port ALL: (?:\[.*\])+')
 
         # TODO: Will be the same regex objects for HCA. Remove 'switch' in name then...
-        self.pattern_switch_port = re.compile(r'\s*GUID (0x.*) port (\d+):(.*)')
-        self.pattern_switch_link = re.compile(r'\s*Link info:\s+(\d+)\s+(\d+)\[\s+\] ==\(')
-        self.pattern_switch_active_link = re.compile(r'\s*Link info:\s+(?P<LID>\d+)\s+(?P<port>\d+).*(?P<Width>\d)X\s+(?P<Speed>[\d+\.]*) Gbps.* Active\/  LinkUp.*(?P<remote_GUID>0x\w+)\s+(?P<remote_LID>\d+)\s+(?P<remote_port>\d+).*\"(?P<node_name>.*)\"')  # noqa: E501
+        self.switch_port_pattern = re.compile(r'\s*GUID (0x.*) port (\d+):(.*)')
+        self.switch_link_pattern = re.compile(r'\s*Link info:\s+(\d+)\s+(\d+)\[\s+\] ==\(')
+        self.switch_active_link_pattern = re.compile(r'\s*Link info:\s+(?P<LID>\d+)\s+(?P<port>\d+).*(?P<Width>\d)X\s+(?P<Speed>[\d+\.]*) Gbps.* Active\/  LinkUp.*(?P<remote_GUID>0x\w+)\s+(?P<remote_LID>\d+)\s+(?P<remote_port>\d+).*\"(?P<node_name>.*)\"')  # noqa: E501
 
     def chunks(self, x, n):
         for i in range(0, len(x), n):
@@ -344,7 +345,7 @@ were encountered')
                 time.time() - ibqueryerrors_start)
             yield ibqueryerrors_duration
 
-        content = re.split(r'^Errors for (.*) \"(.*)\"',
+        content = re.split(self.switch_header_regex_str,
                            ibqueryerrors_stdout,
                            flags=re.MULTILINE)
 
@@ -386,10 +387,11 @@ were encountered')
 
             switch_name = switch[1]
             switch_data = switch[2]
+
             switch_items = switch_data.lstrip().splitlines()
             switch_all_ports = switch_items[0]
 
-            m_switch_all_ports = self.pattern_switch_all_ports.fullmatch(switch_all_ports)
+            m_switch_all_ports = self.switch_all_ports_pattern.fullmatch(switch_all_ports)
 
             # Drop all switch port information,
             # since it must be ignored for building chunk pairs of specific port with link info.
@@ -404,7 +406,7 @@ were encountered')
 
                     port_item, link_item = switch_port_item
 
-                    match_port = self.pattern_switch_port.match(port_item)
+                    match_port = self.switch_port_pattern.match(port_item)
 
                     if match_port:
 
@@ -412,12 +414,12 @@ were encountered')
 
                         if port > 0:
 
-                            match_link = self.pattern_switch_link.match(link_item)
+                            match_link = self.switch_link_pattern.match(link_item)
 
                             if not match_link:
                                 raise RuntimeError('No link info line match for port: {}'.format(port_item))
 
-                            m_active_link = self.pattern_switch_active_link.match(link_item)
+                            m_active_link = self.switch_active_link_pattern.match(link_item)
 
                             if m_active_link:
                                 self.parse_switch(switch_name, match_port, m_active_link)
