@@ -177,7 +177,7 @@ catched on stderr of ibqueryerrors'
         self.bad_status_error_pattern = r'src\/query\_smp\.c\:[\d]+\; (?:mad|umad) \((DR path .*) Attr .*\) bad status ([\d]+); (.*)'  # noqa: E501
         self.bad_status_error_prog = re.compile(self.bad_status_error_pattern)
 
-        self.switch_header_regex_str = r'^Errors for (.*) \"(.*)\"'
+        self.switch_header_regex_str = r'^Errors for 0[x][\da-f]+ \"(.*)\"'
         self.switch_all_ports_pattern = re.compile(r'GUID 0[x][\da-f]+ port ALL: (?:\[.*\])+')
 
         # TODO: Will be the same regex objects for HCA. Remove 'switch' in name then...
@@ -356,7 +356,7 @@ were encountered')
         if content[0] == '':
             del content[0]
 
-        switches = self.chunks(content, 3)
+        switches = self.chunks(content, 2)
 
         for gauge_name in self.gauge_info:
             self.metrics[gauge_name] = GaugeMetricFamily(
@@ -385,8 +385,8 @@ were encountered')
 
         for switch in switches:
 
-            switch_name = switch[1]
-            switch_data = switch[2]
+            switch_name = switch[0]
+            switch_data = switch[1]
 
             switch_items = switch_data.lstrip().splitlines()
             switch_all_ports = switch_items[0]
