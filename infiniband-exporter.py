@@ -255,30 +255,30 @@ catched on stderr of ibqueryerrors'
         else:
             return False
 
-    def parse_switch(self, switch_name, m_port, m_link):
+    def parse_switch(self, switch_name, match_port, match_link):
 
-        guid = m_port.group(1)
-        port = m_port.group(2)
-        counters = self.parse_counter(m_port.group(3))
+        guid = match_port.group(1)
+        port = match_port.group(2)
+        counters = self.parse_counter(match_port.group(3))
 
         for gauge in self.gauge_info.keys():
             self.metrics[gauge].add_metric([
                 switch_name,
                 guid,
                 port,
-                m_link.group('remote_GUID'),
-                m_link.group('remote_port'),
-                m_link.group('node_name')],
-                m_link.group(gauge))
+                match_link.group('remote_GUID'),
+                match_link.group('remote_port'),
+                match_link.group('node_name')],
+                match_link.group(gauge))
 
         for counter in counters:
             self.metrics[counter].add_metric([
                 switch_name,
                 guid,
                 port,
-                m_link.group('remote_GUID'),
-                m_link.group('remote_port'),
-                m_link.group('node_name')],
+                match_link.group('remote_GUID'),
+                match_link.group('remote_port'),
+                match_link.group('node_name')],
                 counters[counter])
 
             if counters[counter] >= 2 ** (self.counter_info[counter]['bits'] - 1):  # noqa: E501
@@ -404,23 +404,23 @@ were encountered')
 
                     port_item, link_item = switch_port_item
 
-                    m_port = self.pattern_switch_port.match(port_item)
+                    match_port = self.pattern_switch_port.match(port_item)
 
-                    if m_port:
+                    if match_port:
 
-                        port = int(m_port.group(2))
+                        port = int(match_port.group(2))
 
                         if port > 0:
 
-                            m_link = self.pattern_switch_link.match(link_item)
+                            match_link = self.pattern_switch_link.match(link_item)
 
-                            if not m_link:
+                            if not match_link:
                                 raise RuntimeError('No link info line match for port: {}'.format(port_item))
 
                             m_active_link = self.pattern_switch_active_link.match(link_item)
 
                             if m_active_link:
-                                self.parse_switch(switch_name, m_port, m_active_link)
+                                self.parse_switch(switch_name, match_port, m_active_link)
 
                     elif not port_item or "##" in port_item:
 
