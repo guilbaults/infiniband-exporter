@@ -256,6 +256,34 @@ catched on stderr of ibqueryerrors'
         else:
             return False
 
+    def init_switch_metrics(self):
+
+        for gauge_name in self.gauge_info:
+            self.metrics[gauge_name] = GaugeMetricFamily(
+                'infiniband_' + gauge_name.lower(),
+                self.gauge_info[gauge_name]['help'],
+                labels=[
+                    'local_name',
+                    'local_guid',
+                    'local_port',
+                    'remote_guid',
+                    'remote_port',
+                    'remote_name'
+                ])
+
+        for counter_name in self.counter_info:
+            self.metrics[counter_name] = CounterMetricFamily(
+                'infiniband_' + counter_name.lower(),
+                self.counter_info[counter_name]['help'],
+                labels=[
+                    'local_name',
+                    'local_guid',
+                    'local_port',
+                    'remote_guid',
+                    'remote_port',
+                    'remote_name'
+                ])
+
     def parse_switch(self, switch_name, match_port, match_link):
 
         guid = match_port.group(1)
@@ -286,7 +314,9 @@ catched on stderr of ibqueryerrors'
                 self.reset_counter(guid, port, counter)
 
     def collect(self):
+
         logging.debug('Start of collection cycle')
+
         ibqueryerrors_duration = GaugeMetricFamily(
             'infiniband_ibqueryerrors_duration_seconds',
             'Number of seconds taken to run ibqueryerrors')
@@ -298,6 +328,8 @@ catched on stderr of ibqueryerrors'
             'infiniband_scrape_ok',
             'Indicate with a 1 if the scrape is valid, otherwise 0 if errors \
 were encountered')
+
+        self.init_switch_metrics()
 
         scrape_with_errors = False
 
@@ -359,31 +391,6 @@ were encountered')
             raise RuntimeError("Inconsistent input content detected: {}".format(content[0]))
 
         switches = self.chunks(content, 2)
-
-        for gauge_name in self.gauge_info:
-            self.metrics[gauge_name] = GaugeMetricFamily(
-                'infiniband_' + gauge_name.lower(),
-                self.gauge_info[gauge_name]['help'],
-                labels=[
-                    'local_name',
-                    'local_guid',
-                    'local_port',
-                    'remote_guid',
-                    'remote_port',
-                    'remote_name'
-                ])
-        for counter_name in self.counter_info:
-            self.metrics[counter_name] = CounterMetricFamily(
-                'infiniband_' + counter_name.lower(),
-                self.counter_info[counter_name]['help'],
-                labels=[
-                    'local_name',
-                    'local_guid',
-                    'local_port',
-                    'remote_guid',
-                    'remote_port',
-                    'remote_name'
-                ])
 
         for switch in switches:
 
