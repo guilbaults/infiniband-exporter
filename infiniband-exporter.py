@@ -177,6 +177,14 @@ catched on stderr of ibqueryerrors'
         self.bad_status_error_pattern = r'src\/query\_smp\.c\:[\d]+\; (?:mad|umad) \((DR path .*) Attr .*\) bad status ([\d]+); (.*)'  # noqa: E501
         self.bad_status_error_prog = re.compile(self.bad_status_error_pattern)
 
+        self.switch_header_regex_str = r'^Errors for 0[x][\da-f]+ \"(.*)\"'
+        self.switch_all_ports_pattern = re.compile(r'GUID 0[x][\da-f]+ port ALL: (?:\[.*\])+')
+
+        # TODO: Will be the same regex objects for HCA. Remove 'switch' in name then...
+        self.switch_port_pattern = re.compile(r'\s*GUID (0x.*) port (\d+):(.*)')
+        self.switch_link_pattern = re.compile(r'\s*Link info:\s+(\d+)\s+(\d+)\[\s+\] ==\(')
+        self.switch_active_link_pattern = re.compile(r'\s*Link info:\s+(?P<LID>\d+)\s+(?P<port>\d+).*(?P<Width>\d)X\s+(?P<Speed>[\d+\.]*) Gbps.* Active\/  LinkUp.*(?P<remote_GUID>0x\w+)\s+(?P<remote_LID>\d+)\s+(?P<remote_port>\d+).*\"(?P<node_name>.*)\"')  # noqa: E501
+
     def chunks(self, x, n):
         for i in range(0, len(x), n):
             yield x[i:i + n]
@@ -237,59 +245,177 @@ catched on stderr of ibqueryerrors'
         return stderr_metrics, error
 
     def process_bad_status_error(self, line, bad_status_error_metric):
+
         result = self.bad_status_error_prog.match(line)
+
         if result:
+
             bad_status_error_metric.add_metric(
                 [result.group(1),    # path
                  result.group(2),    # status
                  result.group(3)],   # error
                 1)
+
             return True
-        else:
+
+        return False
+
+    def init_switch_metrics(self):
+
+        for gauge_name in self.gauge_info:
+            self.metrics[gauge_name] = GaugeMetricFamily(
+                'infiniband_' + gauge_name.lower(),
+                self.gauge_info[gauge_name]['help'],
+                labels=[
+                    'local_name',
+                    'local_guid',
+                    'local_port',
+                    'remote_guid',
+                    'remote_port',
+                    'remote_name'
+                ])
+
+        for counter_name in self.counter_info:
+            self.metrics[counter_name] = CounterMetricFamily(
+                'infiniband_' + counter_name.lower(),
+                self.counter_info[counter_name]['help'],
+                labels=[
+                    'local_name',
+                    'local_guid',
+                    'local_port',
+                    'remote_guid',
+                    'remote_port',
+                    'remote_name'
+                ])
+
+    def process_switch_data(self, content) -> bool:
+        """
+        The method processes switch data.
+
+        Parameters:
+            content (List[str]): Content retrieved from ibqueryerrors STDOUT or from an input file.
+
+        Returns:
+            bool: True on success, otherwise False.
+        """
+
+        if not content:
+            logging.error('Input content is empty.')
             return False
 
-    def parse_switch(self, switch_name, port, link):
-        m_port = re.search(r'GUID (0x.*) port (\d+):(.*)', port)
-        guid = m_port.group(1)
-        port = m_port.group(2)
-        counters = self.parse_counter(m_port.group(3))
+        if not isinstance(content, list):
+            logging.error('Input content should be a list.')
+            return False
 
-        if 'Active' in link:
-            if m_port.group(2) == '0':
-                # Internal IB port for the SM, ignore it
-                pass
-            else:
-                m_link = re.search(r'Link info:\s+(?P<LID>\d+)\s+(?P<port>\d+).*(?P<Width>\d)X\s+(?P<Speed>[\d+\.]*) Gbps.* Active\/  LinkUp.*(?P<remote_GUID>0x\w+)\s+(?P<remote_LID>\d+)\s+(?P<remote_port>\d+).*\"(?P<node_name>.*)\"', link)  # noqa: E501
-                for gauge in self.gauge_info.keys():
-                    self.metrics[gauge].add_metric([
-                        switch_name,
-                        guid,
-                        port,
-                        m_link.group('remote_GUID'),
-                        m_link.group('remote_port'),
-                        m_link.group('node_name')],
-                        m_link.group(gauge))
-
-                for counter in counters:
-                    self.metrics[counter].add_metric([
-                        switch_name,
-                        guid,
-                        port,
-                        m_link.group('remote_GUID'),
-                        m_link.group('remote_port'),
-                        m_link.group('node_name')],
-                        counters[counter])
-
-                    if counters[counter] >= 2 ** (self.counter_info[counter]['bits'] - 1):  # noqa: E501
-                        self.reset_counter(guid, port, counter)
-        elif 'Down' in link:
-            pass
+        # Drop first line that is empty on successful regex split():
+        if content[0] == '':
+            del content[0]
         else:
-            logging.error('Unknown link state on guid={} port={}'.format(
-                guid, port))
+            logging.error("Inconsistent input content detected: {}".format(content[0]))
+            return False
+
+        switches = self.chunks(content, 2)
+
+        for switch in switches:
+
+            if len(switch) != 2:
+                logging.error('Switch data incomplete: {}'.format(switch[0]))
+                return False
+
+            switch_name = switch[0]
+            switch_data = switch[1]
+
+            switch_items = switch_data.lstrip().splitlines()
+            switch_all_ports = switch_items[0]
+
+            m_switch_all_ports = self.switch_all_ports_pattern.fullmatch(switch_all_ports)
+
+            # Drop all switch port information,
+            # since it must be ignored for building chunk pairs of specific port with link info.
+            if m_switch_all_ports:
+                del switch_items[0]
+            else:
+                logging.error("Could not find all port information for switch: {}".format(switch_name))
+                return False
+
+            for switch_port_item in self.chunks(switch_items, 2):
+
+                if len(switch_port_item) == 2:
+
+                    port_item, link_item = switch_port_item
+
+                    match_port = self.switch_port_pattern.match(port_item)
+
+                    if match_port:
+
+                        port = int(match_port.group(2))
+
+                        if port > 0:
+
+                            match_link = self.switch_link_pattern.match(link_item)
+
+                            if not match_link:
+                                logging.error('No link info line match for port: {}'.format(port_item))
+                                return False
+
+                            m_active_link = self.switch_active_link_pattern.match(link_item)
+
+                            if m_active_link:
+                                self.parse_switch(switch_name, match_port, m_active_link)
+
+                    elif not port_item or "##" in port_item:
+
+                        if 'GUID' in switch_port_item[1] or 'Link info' in switch_port_item[1]:
+                            logging.error('Inconsistent switch data found:\nItem[0]: {}\nItem[1]: {}'.
+                                          format(switch_port_item[0], switch_port_item[1]))
+                            return False
+
+                        continue
+                    else:
+                        logging.error('Inconsistent switch data found:\nItem[0]: {}\nItem[1]: {}'.
+                                      format(switch_port_item[0], switch_port_item[1]))
+                        return False
+
+                else:
+                    if 'GUID' in switch_port_item[0] or 'Link info' in switch_port_item[0]:
+                        logging.error('Inconsistent switch data found: {}'.format(switch_port_item[0]))
+                        return False
+
+        return True
+
+    def parse_switch(self, switch_name, match_port, match_link):
+
+        guid = match_port.group(1)
+        port = match_port.group(2)
+        counters = self.parse_counter(match_port.group(3))
+
+        for gauge in self.gauge_info:
+            self.metrics[gauge].add_metric([
+                switch_name,
+                guid,
+                port,
+                match_link.group('remote_GUID'),
+                match_link.group('remote_port'),
+                match_link.group('node_name')],
+                match_link.group(gauge))
+
+        for counter in counters:
+            self.metrics[counter].add_metric([
+                switch_name,
+                guid,
+                port,
+                match_link.group('remote_GUID'),
+                match_link.group('remote_port'),
+                match_link.group('node_name')],
+                counters[counter])
+
+            if counters[counter] >= 2 ** (self.counter_info[counter]['bits'] - 1):  # noqa: E501
+                self.reset_counter(guid, port, counter)
 
     def collect(self):
+
         logging.debug('Start of collection cycle')
+
         ibqueryerrors_duration = GaugeMetricFamily(
             'infiniband_ibqueryerrors_duration_seconds',
             'Number of seconds taken to run ibqueryerrors')
@@ -301,6 +427,8 @@ catched on stderr of ibqueryerrors'
             'infiniband_scrape_ok',
             'Indicate with a 1 if the scrape is valid, otherwise 0 if errors \
 were encountered')
+
+        self.init_switch_metrics()
 
         scrape_with_errors = False
 
@@ -334,6 +462,7 @@ were encountered')
                 ibqueryerrors_stderr = process_stderr.decode("utf-8")
                 logging.error(ibqueryerrors_stderr)
 
+
                 stderr_metrics, error = self.build_stderr_metrics(
                     ibqueryerrors_stderr)
 
@@ -348,51 +477,19 @@ were encountered')
                 time.time() - ibqueryerrors_start)
             yield ibqueryerrors_duration
 
-        # need to skip the first empty line
-        content = re.split(r'^Errors for (.*) \"(.*)\"',
+        content = re.split(self.switch_header_regex_str,
                            ibqueryerrors_stdout,
-                           flags=re.MULTILINE)[1:]
+                           flags=re.MULTILINE)
 
-        switches = self.chunks(content, 3)
+        if self.process_switch_data(content):
+            for counter_name in self.counter_info:
+                yield self.metrics[counter_name]
+            for gauge_name in self.gauge_info:
+                yield self.metrics[gauge_name]
+        else:
+            scrape_with_errors = True
 
-        for gauge_name in self.gauge_info:
-            self.metrics[gauge_name] = GaugeMetricFamily(
-                'infiniband_' + gauge_name.lower(),
-                self.gauge_info[gauge_name]['help'],
-                labels=[
-                    'local_name',
-                    'local_guid',
-                    'local_port',
-                    'remote_guid',
-                    'remote_port',
-                    'remote_name'
-                ])
-        for counter_name in self.counter_info:
-            self.metrics[counter_name] = CounterMetricFamily(
-                'infiniband_' + counter_name.lower(),
-                self.counter_info[counter_name]['help'],
-                labels=[
-                    'local_name',
-                    'local_guid',
-                    'local_port',
-                    'remote_guid',
-                    'remote_port',
-                    'remote_name'
-                ])
-
-        for sw in switches:
-            switch_name = sw[1]
-            for item in list(self.chunks(sw[2].split('\n'), 2))[1:-3]:
-                # each item contain a list of the port and link stats
-                self.parse_switch(switch_name, item[0], item[1])
-
-        for counter_name in self.counter_info.keys():
-            yield self.metrics[counter_name]
-        for gauge_name in self.gauge_info.keys():
-            yield self.metrics[gauge_name]
-
-        scrape_duration.add_metric(
-            [], time.time() - scrape_start)
+        scrape_duration.add_metric([], time.time() - scrape_start)
         yield scrape_duration
 
         if scrape_with_errors:
