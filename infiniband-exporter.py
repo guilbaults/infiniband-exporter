@@ -13,9 +13,9 @@ from prometheus_client.core import CounterMetricFamily, GaugeMetricFamily
 from prometheus_client import make_wsgi_app
 from wsgiref.simple_server import make_server, WSGIRequestHandler
 
-class InfinibandItem(Enum):
-    CA = 1
-    SWITCH = 2
+class InfinibandItem(str, Enum):
+    CA = 'ca'
+    SWITCH = 'switch'
 
 class InfinibandCollector(object):
     def __init__(self, can_reset_counter, input_file, node_name_map):
@@ -265,13 +265,14 @@ catched on stderr of ibqueryerrors'
 
         return False
 
-    def init_switch_metrics(self):
+    def init_metrics(self):
 
         for gauge_name in self.gauge_info:
             self.metrics[gauge_name] = GaugeMetricFamily(
                 'infiniband_' + gauge_name.lower(),
                 self.gauge_info[gauge_name]['help'],
                 labels=[
+                    'component',
                     'local_name',
                     'local_guid',
                     'local_port',
@@ -285,6 +286,7 @@ catched on stderr of ibqueryerrors'
                 'infiniband_' + counter_name.lower(),
                 self.counter_info[counter_name]['help'],
                 labels=[
+                    'component',
                     'local_name',
                     'local_guid',
                     'local_port',
@@ -293,16 +295,25 @@ catched on stderr of ibqueryerrors'
                     'remote_name'
                 ])
 
-    def process_item(self, type_, item) -> bool:
+    def process_item(self, component, item) -> bool:
         """
         The method processes ibquery ca and switch data.
 
         Parameters:
-            switch (Generator[List[str]]): item data.
+            * component (InfinibandItem)
+            * item (Generator[List[str]])
 
         Returns:
             bool: True on success, otherwise False.
         """
+
+        if component is None:
+            logging.error('No component has been passed.')
+            return False
+
+        if not isinstance(component, InfinibandItem):
+            logging.error('Wrong data type passed for component: {}'.format(type(component)))
+            return False
 
         if item is None:
             logging.error('No item data has been passed.')
@@ -321,7 +332,7 @@ catched on stderr of ibqueryerrors'
 
         item_lines = data.lstrip().splitlines()
 
-        if InfinibandItem.SWITCH == type_:
+        if InfinibandItem.SWITCH == component:
 
             switch_all_ports = item_lines[0]
             match_switch_all_ports = self.switch_all_ports_pattern.fullmatch(switch_all_ports)
@@ -355,11 +366,7 @@ catched on stderr of ibqueryerrors'
                         m_active_link = self.active_link_pattern.match(link_item)
 
                         if m_active_link:
-
-                            if InfinibandItem.SWITCH == type_:
-                                self.parse_switch(name, match_port, m_active_link)
-                            else:
-                                print('parse ca...')
+                            self.parse_item(component, name, match_port, m_active_link)
 
                 elif port_item == '' or "##" in port_item:
 
@@ -380,7 +387,7 @@ catched on stderr of ibqueryerrors'
 
         return True
 
-    def parse_switch(self, switch_name, match_port, match_link):
+    def parse_item(self, component, name, match_port, match_link):
 
         guid = match_port.group(1)
         port = match_port.group(2)
@@ -388,7 +395,8 @@ catched on stderr of ibqueryerrors'
 
         for gauge in self.gauge_info:
             self.metrics[gauge].add_metric([
-                switch_name,
+                component.value,
+                name,
                 guid,
                 port,
                 match_link.group('remote_GUID'),
@@ -398,7 +406,8 @@ catched on stderr of ibqueryerrors'
 
         for counter in counters:
             self.metrics[counter].add_metric([
-                switch_name,
+                component.value,
+                name,
                 guid,
                 port,
                 match_link.group('remote_GUID'),
@@ -425,7 +434,7 @@ catched on stderr of ibqueryerrors'
             'Indicate with a 1 if the scrape is valid, otherwise 0 if errors \
 were encountered')
 
-        self.init_switch_metrics()
+        self.init_metrics()
 
         scrape_with_errors = False
 
