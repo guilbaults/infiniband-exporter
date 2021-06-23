@@ -424,7 +424,8 @@ catched on stderr of ibqueryerrors'
         scrape_start = time.time()
         scrape_ok = GaugeMetricFamily(
             'infiniband_scrape_ok',
-            'Indicates with a 1 if the scrape was successful, otherwise 0.')
+            'Indicates with a 1 if the scrape was successful, otherwise 0 on any errors detected '
+            'e.g. ignored lines from ibqueryerrors STDERR or parsing errors.')
 
         self.init_metrics()
 
