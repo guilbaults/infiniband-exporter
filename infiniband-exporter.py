@@ -164,6 +164,12 @@ class InfinibandCollector(object):
                 'severity': 'Error',
                 'bits': 4,
             },
+            'VL15Dropped': {
+                'help': 'The number of incoming VL15 packets dropped due to resource '
+                        'limitations (for example, lack of buffers) in the port.',
+                'severity': 'Error',
+                'bits': 16,
+            },
         }
         self.gauge_info = {
             'Speed': {
