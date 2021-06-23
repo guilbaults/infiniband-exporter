@@ -194,7 +194,6 @@ catched on stderr of ibqueryerrors'
 
         self.switch_all_ports_pattern = re.compile(r'\s*GUID 0[x][\da-f]+ port ALL: (?:\[.*\])+')
 
-        # TODO: Will be the same regex objects for HCA. Remove 'switch' in name then...
         self.port_pattern = re.compile(r'\s*GUID (0x.*) port (\d+):(.*)')
         self.link_pattern = re.compile(r'\s*Link info:\s+(\d+)\s+(\d+)\[\s+\] ==\(')
         self.active_link_pattern = re.compile(r'\s*Link info:\s+(?P<LID>\d+)\s+(?P<port>\d+).*(?P<Width>\d)X\s+(?P<Speed>[\d+\.]*) Gbps.* Active\/  LinkUp.*(?P<remote_GUID>0x\w+)\s+(?P<remote_LID>\d+)\s+(?P<remote_port>\d+).*\"(?P<node_name>.*)\"')  # noqa: E501
