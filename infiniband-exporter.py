@@ -13,6 +13,9 @@ from prometheus_client.core import CounterMetricFamily, GaugeMetricFamily
 from prometheus_client import make_wsgi_app
 from wsgiref.simple_server import make_server, WSGIRequestHandler
 
+class ParsingError(Exception):
+    pass
+
 class InfinibandItem(str, Enum):
     CA = 'ca'
     SWITCH = 'switch'
@@ -301,7 +304,7 @@ catched on stderr of ibqueryerrors'
                     'remote_name'
                 ])
 
-    def process_item(self, component, item) -> bool:
+    def process_item(self, component, item):
         """
         The method processes ibquery ca and switch data.
 
@@ -309,21 +312,19 @@ catched on stderr of ibqueryerrors'
             * component (InfinibandItem)
             * item (Generator[List[str]])
 
-        Returns:
-            bool: True on success, otherwise False.
+        Throws:
+            ParsingError - Raised during parsing of input content due to inconsistencies.
+            RuntimeError - Raised on wrong data type for parameter passed.
         """
 
         if not isinstance(component, InfinibandItem):
-            logging.error('Wrong data type passed for component: {}'.format(type(component)))
-            return False
+            raise RuntimeError('Wrong data type passed for component: {}'.format(type(component)))
 
         if not isinstance(item, list):
-            logging.error('Wrong data type passed for item: {}'.format(type(item)))
-            return False
+            raise RuntimeError('Wrong data type passed for item: {}'.format(type(item)))
 
         if len(item) != 2:
-            logging.error('Item data incomplete: {}'.format(item[0]))
-            return False
+            raise ParsingError('Item data incomplete:\n{}'.format(item[0]))
 
         name = item[0]
         data = item[1]
@@ -338,8 +339,7 @@ catched on stderr of ibqueryerrors'
             if match_switch_all_ports:
                 del item_lines[0]
             else:
-                logging.error('Could not find all port information for item: {}'.format(name))
-                return False
+                raise ParsingError('Could not find all port information for item:\n{}'.format(name))
 
         for item_pair in self.chunks(item_lines, 2):
 
@@ -358,8 +358,7 @@ catched on stderr of ibqueryerrors'
                         match_link = self.link_pattern.match(link_item)
 
                         if not match_link:
-                            logging.error('No link info line match for port: {}'.format(port_item))
-                            return False
+                            raise ParsingError('No link info line match for port:\n{}'.format(port_item))
 
                         m_active_link = self.active_link_pattern.match(link_item)
 
@@ -369,21 +368,17 @@ catched on stderr of ibqueryerrors'
                 elif port_item == '' or "##" in port_item:
 
                     if not (link_item == '' or "##" in link_item):
-                        logging.error('Inconsistent data found:\nitem_pair[0]: {}\nitem_pair[1]: {}'.
-                                      format(item_pair[0], item_pair[1]))
+                        raise ParsingError('Inconsistent data found:\nitem_pair[0]: {}\nitem_pair[1]: {}'.
+                                           format(item_pair[0], item_pair[1]))
 
                     continue
                 else:
-                    logging.error('Inconsistent data found:\nitem_pair[0]: {}\nitem_pair[1]: {}'.
-                                    format(item_pair[0], item_pair[1]))
-                    return False
+                    raise ParsingError('Inconsistent data found:\nitem_pair[0]: {}\nitem_pair[1]: {}'.
+                                       format(item_pair[0], item_pair[1]))
 
             else:
                 if not '##' in item_pair[0]:
-                    logging.error('Inconsistent data found: {}'.format(item_pair[0]))
-                    return False
-
-        return True
+                    raise ParsingError('Inconsistent data found:\n{}'.format(item_pair[0]))
 
     def parse_item(self, component, name, match_port, match_link):
 
@@ -483,48 +478,38 @@ catched on stderr of ibqueryerrors'
         content = re.split(self.ibqueryerrors_header_regex_str,
                            ibqueryerrors_stdout,
                            flags=re.MULTILINE)
+        try:
 
-        if not content:
-            logging.error('Input content is empty.')
-            return False
+            if not content:
+                raise ParsingError('Input content is empty.')
 
-        if not isinstance(content, list):
-            logging.error('Input content should be a list.')
-            return False
+            if not isinstance(content, list):
+                raise RuntimeError('Input content should be a list.')
 
-        # Drop first line that is empty on successful regex split():
-        if content[0] == '':
-            del content[0]
-        else:
-            logging.error("Inconsistent input content detected: {}".format(content[0]))
-            return False
-
-        input_data_chunks = self.chunks(content, 2)
-
-        error_on_parsing = False
-
-        for data_chunk in input_data_chunks:
-
-            if error_on_parsing:
-                break
-
-            # TODO: Check for chunk size=2
-
-            match_switch = self.switch_all_ports_pattern.match(data_chunk[1])
-
-            if match_switch:
-                if self.process_item(InfinibandItem.SWITCH, data_chunk) == False:
-                    error_on_parsing = True
+            # Drop first line that is empty on successful regex split():
+            if content[0] == '':
+                del content[0]
             else:
-                if self.process_item(InfinibandItem.CA, data_chunk) == False:
-                    error_on_parsing = True
+                raise ParsingError('Inconsistent input content detected:\n{}'.format(content[0]))
 
-        if error_on_parsing == False:
+            input_data_chunks = self.chunks(content, 2)
+
+            for data_chunk in input_data_chunks:
+
+                match_switch = self.switch_all_ports_pattern.match(data_chunk[1])
+
+                if match_switch:
+                    self.process_item(InfinibandItem.SWITCH, data_chunk)
+                else:
+                    self.process_item(InfinibandItem.CA, data_chunk)
+
             for counter_name in self.counter_info:
                 yield self.metrics[counter_name]
             for gauge_name in self.gauge_info:
                 yield self.metrics[gauge_name]
-        else:
+
+        except ParsingError as e:
+            logging.error(e)
             scrape_with_errors = True
 
         scrape_duration.add_metric([], time.time() - scrape_start)
