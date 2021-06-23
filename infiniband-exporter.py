@@ -51,7 +51,7 @@ class InfinibandCollector(object):
             },
             'PortXmitDiscards': {
                 'help': 'Total number of outbound packets discarded by the '
-                        'port because the port is down or congested',
+                        'port because the port is down or congested.',
                 'severity': 'Error',
                 'bits': 16,
             },
@@ -59,7 +59,7 @@ class InfinibandCollector(object):
                 'help': 'The number of ticks during which the port had data '
                         'to transmit but no data was sent during the entire '
                         'tick (either because of insufficient credits or '
-                        'because of lack of arbitration)',
+                        'because of lack of arbitration).',
                 'severity': 'Informative',
                 'bits': 32,
             },
@@ -84,20 +84,20 @@ class InfinibandCollector(object):
             },
             'PortRcvPkts': {
                 'help': 'Total number of packets received. This may include '
-                        'packets containing errors',
+                        'packets containing errors.',
                 'severity': 'Informative',
                 'bits': 64,
             },
             'PortRcvErrors': {
                 'help': 'Total number of packets containing an error that '
-                        'were received on the port',
+                        'were received on the port.',
                 'severity': 'Informative',
                 'bits': 16,
             },
             'PortUnicastXmitPkts': {
                 'help': 'Total number of unicast packets transmitted on all '
                         'VLs from the port. This may include unicast packets '
-                        'with errors',
+                        'with errors.',
                 'severity': 'Informative',
                 'bits': 64,
             },
@@ -110,57 +110,57 @@ class InfinibandCollector(object):
             'PortMulticastXmitPkts': {
                 'help': 'Total number of multicast packets transmitted on '
                         'all VLs from the port. This may include multicast '
-                        'packets with errors',
+                        'packets with errors.',
                 'severity': 'Informative',
                 'bits': 64,
             },
             'PortMulticastRcvPkts': {
                 'help': 'Total number of multicast packets, including '
-                        'multicast packets containing errors',
+                        'multicast packets containing errors.',
                 'severity': 'Informative',
                 'bits': 64,
             },
             'PortBufferOverrunErrors': {
                 'help': 'Total number of packets received on the part '
-                        'discarded due to buffer overrrun',
+                        'discarded due to buffer overrrun.',
                 'severity': 'Error',
                 'bits': 16,
             },
             'PortLocalPhysicalErrors': {
                 'help': 'Total number of packets received with physical '
-                        'error like CRC error',
+                        'error like CRC error.',
                 'severity': 'Error',
                 'bits': 16,
             },
             'PortRcvRemotePhysicalErrors': {
                 'help': 'Total number of packets marked with the EBP '
-                        'delimiter received on the port',
+                        'delimiter received on the port.',
                 'severity': 'Error',
                 'bits': 16,
             },
             'PortInactiveDiscards': {
                 'help': 'Total number of packets discarded due to the port '
-                        'being in the inactive state',
+                        'being in the inactive state.',
                 'severity': 'Error',
                 'bits': 16,
             },
             'PortDLIDMappingErrors': {
                 'help': 'Total number of packets on the port that could not '
-                        'be forwared by the switch due to DLID mapping errors',
+                        'be forwared by the switch due to DLID mapping errors.',
                 'severity': 'Error',
                 'bits': 16,
             },
             'LinkErrorRecoveryCounter': {
                 'help': 'Total number of times the Port Training state '
                         'machine has successfully completed the link error '
-                        'recovery process',
+                        'recovery process.',
                 'severity': 'Error',
                 'bits': 8,
             },
             'LocalLinkIntegrityErrors': {
                 'help': 'The number of times that the count of local '
                         'physical errors exceeded the threshold specified '
-                        'by LocalPhyErrors',
+                        'by LocalPhyErrors.',
                 'severity': 'Error',
                 'bits': 4,
             },
@@ -313,16 +313,8 @@ catched on stderr of ibqueryerrors'
             bool: True on success, otherwise False.
         """
 
-        if component is None:
-            logging.error('No component has been passed.')
-            return False
-
         if not isinstance(component, InfinibandItem):
             logging.error('Wrong data type passed for component: {}'.format(type(component)))
-            return False
-
-        if item is None:
-            logging.error('No item data has been passed.')
             return False
 
         if not isinstance(item, list):
@@ -430,15 +422,14 @@ catched on stderr of ibqueryerrors'
 
         ibqueryerrors_duration = GaugeMetricFamily(
             'infiniband_ibqueryerrors_duration_seconds',
-            'Number of seconds taken to run ibqueryerrors')
+            'Number of seconds taken to run ibqueryerrors.')
         scrape_duration = GaugeMetricFamily(
             'infiniband_scrape_duration_seconds',
-            'Number of seconds taken to collect and parse the stats')
+            'Number of seconds taken to collect and parse the stats.')
         scrape_start = time.time()
         scrape_ok = GaugeMetricFamily(
             'infiniband_scrape_ok',
-            'Indicate with a 1 if the scrape is valid, otherwise 0 if errors \
-were encountered')
+            'Indicates with a 1 if the scrape was successful, otherwise 0.')
 
         self.init_metrics()
 
@@ -491,8 +482,6 @@ were encountered')
         content = re.split(self.ibqueryerrors_header_regex_str,
                            ibqueryerrors_stdout,
                            flags=re.MULTILINE)
-
-        print(len(content))
 
         if not content:
             logging.error('Input content is empty.')
