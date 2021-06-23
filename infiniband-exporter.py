@@ -188,7 +188,7 @@ catched on stderr of ibqueryerrors'
         # TODO: Will be the same regex objects for HCA. Remove 'switch' in name then...
         self.port_pattern = re.compile(r'\s*GUID (0x.*) port (\d+):(.*)')
         self.link_pattern = re.compile(r'\s*Link info:\s+(\d+)\s+(\d+)\[\s+\] ==\(')
-        self.switch_active_link_pattern = re.compile(r'\s*Link info:\s+(?P<LID>\d+)\s+(?P<port>\d+).*(?P<Width>\d)X\s+(?P<Speed>[\d+\.]*) Gbps.* Active\/  LinkUp.*(?P<remote_GUID>0x\w+)\s+(?P<remote_LID>\d+)\s+(?P<remote_port>\d+).*\"(?P<node_name>.*)\"')  # noqa: E501
+        self.active_link_pattern = re.compile(r'\s*Link info:\s+(?P<LID>\d+)\s+(?P<port>\d+).*(?P<Width>\d)X\s+(?P<Speed>[\d+\.]*) Gbps.* Active\/  LinkUp.*(?P<remote_GUID>0x\w+)\s+(?P<remote_LID>\d+)\s+(?P<remote_port>\d+).*\"(?P<node_name>.*)\"')  # noqa: E501
 
     def chunks(self, x, n):
         for i in range(0, len(x), n):
@@ -352,7 +352,7 @@ catched on stderr of ibqueryerrors'
                             logging.error('No link info line match for port: {}'.format(port_item))
                             return False
 
-                        m_active_link = self.switch_active_link_pattern.match(link_item)
+                        m_active_link = self.active_link_pattern.match(link_item)
 
                         if m_active_link:
 
