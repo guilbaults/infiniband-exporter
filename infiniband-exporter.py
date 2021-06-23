@@ -173,6 +173,12 @@ class InfinibandCollector(object):
                 'severity': 'Error',
                 'bits': 16,
             },
+            'PortNeighborMTUDiscards': {
+                'help': 'Total outbound packets discarded by the port because '
+                        'packet length exceeded the neighbor MTU.',
+                'severity': 'Error',
+                'bits': 16,
+            }
         }
         self.gauge_info = {
             'Speed': {
@@ -397,18 +403,22 @@ catched on stderr of ibqueryerrors'
                 match_link.group(gauge))
 
         for counter in counters:
-            self.metrics[counter].add_metric([
-                component.value,
-                name,
-                guid,
-                port,
-                match_link.group('remote_GUID'),
-                match_link.group('remote_port'),
-                match_link.group('node_name')],
-                counters[counter])
+            try:
+                self.metrics[counter].add_metric([
+                    component.value,
+                    name,
+                    guid,
+                    port,
+                    match_link.group('remote_GUID'),
+                    match_link.group('remote_port'),
+                    match_link.group('node_name')],
+                    counters[counter])
 
-            if counters[counter] >= 2 ** (self.counter_info[counter]['bits'] - 1):  # noqa: E501
-                self.reset_counter(guid, port, counter)
+                if counters[counter] >= 2 ** (self.counter_info[counter]['bits'] - 1):  # noqa: E501
+                    self.reset_counter(guid, port, counter)
+            except KeyError:
+                logging.error('Missing description for {}'.format(counter))
+
 
     def collect(self):
 
