@@ -447,7 +447,8 @@ catched on stderr of ibqueryerrors'
                 '--suppress-common',
                 '--data',
                 '--report-port',
-                '--switch']
+                '--switch',
+                '--ca']
             if self.node_name_map:
                 ibqueryerrors_args.append('--node-name-map')
                 ibqueryerrors_args.append(self.node_name_map)
