@@ -34,6 +34,7 @@ class InfinibandCollector(object):
                     if m:
                         self.node_name[m.group(1)] = m.group(2)
 
+        self.scrape_with_errors = False
         self.metrics = {}
 
         # Description based on https://community.mellanox.com/s/article/understanding-mlx5-linux-counters-and-status-parameters # noqa: E501
@@ -417,12 +418,15 @@ catched on stderr of ibqueryerrors'
                 if counters[counter] >= 2 ** (self.counter_info[counter]['bits'] - 1):  # noqa: E501
                     self.reset_counter(guid, port, counter)
             except KeyError:
-                logging.error('Missing description for {}'.format(counter))
+                self.scrape_with_errors = True
+                logging.error('Missing description for counter metric: {}'.format(counter))
 
 
     def collect(self):
 
         logging.debug('Start of collection cycle')
+
+        self.scrape_with_errors = False
 
         ibqueryerrors_duration = GaugeMetricFamily(
             'infiniband_ibqueryerrors_duration_seconds',
@@ -437,8 +441,6 @@ catched on stderr of ibqueryerrors'
             'e.g. ignored lines from ibqueryerrors STDERR or parsing errors.')
 
         self.init_metrics()
-
-        scrape_with_errors = False
 
         ibqueryerrors_stdout = ""
         if self.input_file:
@@ -478,7 +480,7 @@ catched on stderr of ibqueryerrors'
                     yield stderr_metric
 
                 if error:
-                    scrape_with_errors = True
+                    self.scrape_with_errors = True
 
             ibqueryerrors_duration.add_metric(
                 [],
@@ -520,12 +522,12 @@ catched on stderr of ibqueryerrors'
 
         except ParsingError as e:
             logging.error(e)
-            scrape_with_errors = True
+            self.scrape_with_errors = True
 
         scrape_duration.add_metric([], time.time() - scrape_start)
         yield scrape_duration
 
-        if scrape_with_errors:
+        if self.scrape_with_errors:
             scrape_ok.add_metric([], 0)
         else:
             scrape_ok.add_metric([], 1)
