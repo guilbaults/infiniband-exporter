@@ -182,16 +182,15 @@ class InfinibandCollector(object):
         }
         self.gauge_info = {
             'Speed': {
-                'help': 'Link current speed per lane ',
+                'help': 'Link current speed per lane.',
             },
             'Width': {
-                'help': 'Lanes per link',
+                'help': 'Lanes per link.',
             }
         }
 
         self.bad_status_error_metric_name = 'infiniband_bad_status_error'
-        self.bad_status_error_metric_help = 'Detected bad status error \
-catched on stderr of ibqueryerrors'
+        self.bad_status_error_metric_help = 'Bad status error catched from STDERR by ibqueryerrors.'
         self.bad_status_error_metric_labels = ['path', 'status', 'error']
         self.bad_status_error_pattern = r'src\/query\_smp\.c\:[\d]+\; (?:mad|umad) \((DR path .*) Attr .*\) bad status ([\d]+); (.*)'  # noqa: E501
         self.bad_status_error_prog = re.compile(self.bad_status_error_pattern)
@@ -433,7 +432,8 @@ catched on stderr of ibqueryerrors'
         scrape_start = time.time()
         scrape_ok = GaugeMetricFamily(
             'infiniband_scrape_ok',
-            'Indicates with a 1 if the scrape was successful, otherwise 0 on any errors detected '
+            'Indicates with a 1 if the scrape was successful and complete, '
+            'otherwise 0 on any non critical errors detected '
             'e.g. ignored lines from ibqueryerrors STDERR or parsing errors.')
 
         self.init_metrics()
