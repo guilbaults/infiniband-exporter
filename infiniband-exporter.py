@@ -8,10 +8,17 @@ import os
 import sys
 import logging
 
+from enum import Enum
 from prometheus_client.core import CounterMetricFamily, GaugeMetricFamily
 from prometheus_client import make_wsgi_app
 from wsgiref.simple_server import make_server, WSGIRequestHandler
 
+class ParsingError(Exception):
+    pass
+
+class InfinibandItem(str, Enum):
+    CA = 'ca'
+    SWITCH = 'switch'
 
 class InfinibandCollector(object):
     def __init__(self, can_reset_counter, input_file, node_name_map):
@@ -47,7 +54,7 @@ class InfinibandCollector(object):
             },
             'PortXmitDiscards': {
                 'help': 'Total number of outbound packets discarded by the '
-                        'port because the port is down or congested',
+                        'port because the port is down or congested.',
                 'severity': 'Error',
                 'bits': 16,
             },
@@ -55,7 +62,7 @@ class InfinibandCollector(object):
                 'help': 'The number of ticks during which the port had data '
                         'to transmit but no data was sent during the entire '
                         'tick (either because of insufficient credits or '
-                        'because of lack of arbitration)',
+                        'because of lack of arbitration).',
                 'severity': 'Informative',
                 'bits': 32,
             },
@@ -80,20 +87,20 @@ class InfinibandCollector(object):
             },
             'PortRcvPkts': {
                 'help': 'Total number of packets received. This may include '
-                        'packets containing errors',
+                        'packets containing errors.',
                 'severity': 'Informative',
                 'bits': 64,
             },
             'PortRcvErrors': {
                 'help': 'Total number of packets containing an error that '
-                        'were received on the port',
+                        'were received on the port.',
                 'severity': 'Informative',
                 'bits': 16,
             },
             'PortUnicastXmitPkts': {
                 'help': 'Total number of unicast packets transmitted on all '
                         'VLs from the port. This may include unicast packets '
-                        'with errors',
+                        'with errors.',
                 'severity': 'Informative',
                 'bits': 64,
             },
@@ -106,60 +113,72 @@ class InfinibandCollector(object):
             'PortMulticastXmitPkts': {
                 'help': 'Total number of multicast packets transmitted on '
                         'all VLs from the port. This may include multicast '
-                        'packets with errors',
+                        'packets with errors.',
                 'severity': 'Informative',
                 'bits': 64,
             },
             'PortMulticastRcvPkts': {
                 'help': 'Total number of multicast packets, including '
-                        'multicast packets containing errors',
+                        'multicast packets containing errors.',
                 'severity': 'Informative',
                 'bits': 64,
             },
             'PortBufferOverrunErrors': {
                 'help': 'Total number of packets received on the part '
-                        'discarded due to buffer overrrun',
+                        'discarded due to buffer overrrun.',
                 'severity': 'Error',
                 'bits': 16,
             },
             'PortLocalPhysicalErrors': {
                 'help': 'Total number of packets received with physical '
-                        'error like CRC error',
+                        'error like CRC error.',
                 'severity': 'Error',
                 'bits': 16,
             },
             'PortRcvRemotePhysicalErrors': {
                 'help': 'Total number of packets marked with the EBP '
-                        'delimiter received on the port',
+                        'delimiter received on the port.',
                 'severity': 'Error',
                 'bits': 16,
             },
             'PortInactiveDiscards': {
                 'help': 'Total number of packets discarded due to the port '
-                        'being in the inactive state',
+                        'being in the inactive state.',
                 'severity': 'Error',
                 'bits': 16,
             },
             'PortDLIDMappingErrors': {
                 'help': 'Total number of packets on the port that could not '
-                        'be forwared by the switch due to DLID mapping errors',
+                        'be forwared by the switch due to DLID mapping errors.',
                 'severity': 'Error',
                 'bits': 16,
             },
             'LinkErrorRecoveryCounter': {
                 'help': 'Total number of times the Port Training state '
                         'machine has successfully completed the link error '
-                        'recovery process',
+                        'recovery process.',
                 'severity': 'Error',
                 'bits': 8,
             },
             'LocalLinkIntegrityErrors': {
                 'help': 'The number of times that the count of local '
                         'physical errors exceeded the threshold specified '
-                        'by LocalPhyErrors',
+                        'by LocalPhyErrors.',
                 'severity': 'Error',
                 'bits': 4,
             },
+            'VL15Dropped': {
+                'help': 'The number of incoming VL15 packets dropped due to resource '
+                        'limitations (for example, lack of buffers) in the port.',
+                'severity': 'Error',
+                'bits': 16,
+            },
+            'PortNeighborMTUDiscards': {
+                'help': 'Total outbound packets discarded by the port because '
+                        'packet length exceeded the neighbor MTU.',
+                'severity': 'Error',
+                'bits': 16,
+            }
         }
         self.gauge_info = {
             'Speed': {
@@ -177,13 +196,13 @@ catched on stderr of ibqueryerrors'
         self.bad_status_error_pattern = r'src\/query\_smp\.c\:[\d]+\; (?:mad|umad) \((DR path .*) Attr .*\) bad status ([\d]+); (.*)'  # noqa: E501
         self.bad_status_error_prog = re.compile(self.bad_status_error_pattern)
 
-        self.switch_header_regex_str = r'^Errors for 0[x][\da-f]+ \"(.*)\"'
-        self.switch_all_ports_pattern = re.compile(r'GUID 0[x][\da-f]+ port ALL: (?:\[.*\])+')
+        self.ibqueryerrors_header_regex_str = r'^Errors for (?:0[x][\da-f]+ )?\"(.*)\"$'
 
-        # TODO: Will be the same regex objects for HCA. Remove 'switch' in name then...
-        self.switch_port_pattern = re.compile(r'\s*GUID (0x.*) port (\d+):(.*)')
-        self.switch_link_pattern = re.compile(r'\s*Link info:\s+(\d+)\s+(\d+)\[\s+\] ==\(')
-        self.switch_active_link_pattern = re.compile(r'\s*Link info:\s+(?P<LID>\d+)\s+(?P<port>\d+).*(?P<Width>\d)X\s+(?P<Speed>[\d+\.]*) Gbps.* Active\/  LinkUp.*(?P<remote_GUID>0x\w+)\s+(?P<remote_LID>\d+)\s+(?P<remote_port>\d+).*\"(?P<node_name>.*)\"')  # noqa: E501
+        self.switch_all_ports_pattern = re.compile(r'\s*GUID 0[x][\da-f]+ port ALL: (?:\[.*\])+')
+
+        self.port_pattern = re.compile(r'\s*GUID (0x.*) port (\d+):(.*)')
+        self.link_pattern = re.compile(r'\s*Link info:\s+(\d+)\s+(\d+)\[\s+\] ==\(')
+        self.active_link_pattern = re.compile(r'\s*Link info:\s+(?P<LID>\d+)\s+(?P<port>\d+).*(?P<Width>\d)X\s+(?P<Speed>[\d+\.]*) Gbps.* Active\/  LinkUp.*(?P<remote_GUID>0x\w+)\s+(?P<remote_LID>\d+)\s+(?P<remote_port>\d+).*\"(?P<node_name>.*)\"')  # noqa: E501
 
     def chunks(self, x, n):
         for i in range(0, len(x), n):
@@ -260,13 +279,14 @@ catched on stderr of ibqueryerrors'
 
         return False
 
-    def init_switch_metrics(self):
+    def init_metrics(self):
 
         for gauge_name in self.gauge_info:
             self.metrics[gauge_name] = GaugeMetricFamily(
                 'infiniband_' + gauge_name.lower(),
                 self.gauge_info[gauge_name]['help'],
                 labels=[
+                    'component',
                     'local_name',
                     'local_guid',
                     'local_port',
@@ -280,6 +300,7 @@ catched on stderr of ibqueryerrors'
                 'infiniband_' + counter_name.lower(),
                 self.counter_info[counter_name]['help'],
                 labels=[
+                    'component',
                     'local_name',
                     'local_guid',
                     'local_port',
@@ -288,102 +309,83 @@ catched on stderr of ibqueryerrors'
                     'remote_name'
                 ])
 
-    def process_switch_data(self, content) -> bool:
+    def process_item(self, component, item):
         """
-        The method processes switch data.
+        The method processes ibquery ca and switch data.
 
         Parameters:
-            content (List[str]): Content retrieved from ibqueryerrors STDOUT or from an input file.
+            * component (InfinibandItem)
+            * item (Generator[List[str]])
 
-        Returns:
-            bool: True on success, otherwise False.
+        Throws:
+            ParsingError - Raised during parsing of input content due to inconsistencies.
+            RuntimeError - Raised on wrong data type for parameter passed.
         """
 
-        if not content:
-            logging.error('Input content is empty.')
-            return False
+        if not isinstance(component, InfinibandItem):
+            raise RuntimeError('Wrong data type passed for component: {}'.format(type(component)))
 
-        if not isinstance(content, list):
-            logging.error('Input content should be a list.')
-            return False
+        if not isinstance(item, list):
+            raise RuntimeError('Wrong data type passed for item: {}'.format(type(item)))
 
-        # Drop first line that is empty on successful regex split():
-        if content[0] == '':
-            del content[0]
-        else:
-            logging.error("Inconsistent input content detected: {}".format(content[0]))
-            return False
+        if len(item) != 2:
+            raise ParsingError('Item data incomplete:\n{}'.format(item[0]))
 
-        switches = self.chunks(content, 2)
+        name = item[0]
+        data = item[1]
 
-        for switch in switches:
+        item_lines = data.lstrip().splitlines()
 
-            if len(switch) != 2:
-                logging.error('Switch data incomplete: {}'.format(switch[0]))
-                return False
+        if InfinibandItem.SWITCH == component:
 
-            switch_name = switch[0]
-            switch_data = switch[1]
+            switch_all_ports = item_lines[0]
+            match_switch_all_ports = self.switch_all_ports_pattern.fullmatch(switch_all_ports)
 
-            switch_items = switch_data.lstrip().splitlines()
-            switch_all_ports = switch_items[0]
-
-            m_switch_all_ports = self.switch_all_ports_pattern.fullmatch(switch_all_ports)
-
-            # Drop all switch port information,
-            # since it must be ignored for building chunk pairs of specific port with link info.
-            if m_switch_all_ports:
-                del switch_items[0]
+            if match_switch_all_ports:
+                del item_lines[0]
             else:
-                logging.error("Could not find all port information for switch: {}".format(switch_name))
-                return False
+                raise ParsingError('Could not find all port information for item:\n{}'.format(name))
 
-            for switch_port_item in self.chunks(switch_items, 2):
+        for item_pair in self.chunks(item_lines, 2):
 
-                if len(switch_port_item) == 2:
+            if len(item_pair) == 2:
 
-                    port_item, link_item = switch_port_item
+                port_item, link_item = item_pair
 
-                    match_port = self.switch_port_pattern.match(port_item)
+                match_port = self.port_pattern.match(port_item)
 
-                    if match_port:
+                if match_port:
 
-                        port = int(match_port.group(2))
+                    port = int(match_port.group(2))
 
-                        if port > 0:
+                    if port > 0:
 
-                            match_link = self.switch_link_pattern.match(link_item)
+                        match_link = self.link_pattern.match(link_item)
 
-                            if not match_link:
-                                logging.error('No link info line match for port: {}'.format(port_item))
-                                return False
+                        if not match_link:
+                            raise ParsingError('No link info line match for port:\n{}'.format(port_item))
 
-                            m_active_link = self.switch_active_link_pattern.match(link_item)
+                        m_active_link = self.active_link_pattern.match(link_item)
 
-                            if m_active_link:
-                                self.parse_switch(switch_name, match_port, m_active_link)
+                        if m_active_link:
+                            self.parse_item(component, name, match_port, m_active_link)
 
-                    elif not port_item or "##" in port_item:
+                elif port_item == '' or "##" in port_item:
 
-                        if 'GUID' in switch_port_item[1] or 'Link info' in switch_port_item[1]:
-                            logging.error('Inconsistent switch data found:\nItem[0]: {}\nItem[1]: {}'.
-                                          format(switch_port_item[0], switch_port_item[1]))
-                            return False
+                    if not (link_item == '' or "##" in link_item):
+                        raise ParsingError('Inconsistent data found:\nitem_pair[0]: {}\nitem_pair[1]: {}'.
+                                           format(item_pair[0], item_pair[1]))
 
-                        continue
-                    else:
-                        logging.error('Inconsistent switch data found:\nItem[0]: {}\nItem[1]: {}'.
-                                      format(switch_port_item[0], switch_port_item[1]))
-                        return False
-
+                    continue
                 else:
-                    if 'GUID' in switch_port_item[0] or 'Link info' in switch_port_item[0]:
-                        logging.error('Inconsistent switch data found: {}'.format(switch_port_item[0]))
-                        return False
+                    raise ParsingError('Inconsistent data found:\nitem_pair[0]: {}\nitem_pair[1]: {}'.
+                                       format(item_pair[0], item_pair[1]))
 
-        return True
+            else:
+                if not '##' in item_pair[0]:
+                    raise ParsingError('Inconsistent data found:\n{}'.format(item_pair[0]))
 
-    def parse_switch(self, switch_name, match_port, match_link):
+    def parse_item(self, component, name, match_port, match_link):
 
         guid = match_port.group(1)
         port = match_port.group(2)
@@ -391,7 +393,8 @@ catched on stderr of ibqueryerrors'
 
         for gauge in self.gauge_info:
             self.metrics[gauge].add_metric([
-                switch_name,
+                component.value,
+                name,
                 guid,
                 port,
                 match_link.group('remote_GUID'),
@@ -400,17 +403,22 @@ catched on stderr of ibqueryerrors'
                 match_link.group(gauge))
 
         for counter in counters:
-            self.metrics[counter].add_metric([
-                switch_name,
-                guid,
-                port,
-                match_link.group('remote_GUID'),
-                match_link.group('remote_port'),
-                match_link.group('node_name')],
-                counters[counter])
+            try:
+                self.metrics[counter].add_metric([
+                    component.value,
+                    name,
+                    guid,
+                    port,
+                    match_link.group('remote_GUID'),
+                    match_link.group('remote_port'),
+                    match_link.group('node_name')],
+                    counters[counter])
 
-            if counters[counter] >= 2 ** (self.counter_info[counter]['bits'] - 1):  # noqa: E501
-                self.reset_counter(guid, port, counter)
+                if counters[counter] >= 2 ** (self.counter_info[counter]['bits'] - 1):  # noqa: E501
+                    self.reset_counter(guid, port, counter)
+            except KeyError:
+                logging.error('Missing description for {}'.format(counter))
+
 
     def collect(self):
 
@@ -418,17 +426,17 @@ catched on stderr of ibqueryerrors'
 
         ibqueryerrors_duration = GaugeMetricFamily(
             'infiniband_ibqueryerrors_duration_seconds',
-            'Number of seconds taken to run ibqueryerrors')
+            'Number of seconds taken to run ibqueryerrors.')
         scrape_duration = GaugeMetricFamily(
             'infiniband_scrape_duration_seconds',
-            'Number of seconds taken to collect and parse the stats')
+            'Number of seconds taken to collect and parse the stats.')
         scrape_start = time.time()
         scrape_ok = GaugeMetricFamily(
             'infiniband_scrape_ok',
-            'Indicate with a 1 if the scrape is valid, otherwise 0 if errors \
-were encountered')
+            'Indicates with a 1 if the scrape was successful, otherwise 0 on any errors detected '
+            'e.g. ignored lines from ibqueryerrors STDERR or parsing errors.')
 
-        self.init_switch_metrics()
+        self.init_metrics()
 
         scrape_with_errors = False
 
@@ -444,7 +452,8 @@ were encountered')
                 '--suppress-common',
                 '--data',
                 '--report-port',
-                '--switch']
+                '--switch',
+                '--ca']
             if self.node_name_map:
                 ibqueryerrors_args.append('--node-name-map')
                 ibqueryerrors_args.append(self.node_name_map)
@@ -462,7 +471,6 @@ were encountered')
                 ibqueryerrors_stderr = process_stderr.decode("utf-8")
                 logging.error(ibqueryerrors_stderr)
 
-
                 stderr_metrics, error = self.build_stderr_metrics(
                     ibqueryerrors_stderr)
 
@@ -477,16 +485,41 @@ were encountered')
                 time.time() - ibqueryerrors_start)
             yield ibqueryerrors_duration
 
-        content = re.split(self.switch_header_regex_str,
+        content = re.split(self.ibqueryerrors_header_regex_str,
                            ibqueryerrors_stdout,
                            flags=re.MULTILINE)
+        try:
 
-        if self.process_switch_data(content):
+            if not content:
+                raise ParsingError('Input content is empty.')
+
+            if not isinstance(content, list):
+                raise RuntimeError('Input content should be a list.')
+
+            # Drop first line that is empty on successful regex split():
+            if content[0] == '':
+                del content[0]
+            else:
+                raise ParsingError('Inconsistent input content detected:\n{}'.format(content[0]))
+
+            input_data_chunks = self.chunks(content, 2)
+
+            for data_chunk in input_data_chunks:
+
+                match_switch = self.switch_all_ports_pattern.match(data_chunk[1])
+
+                if match_switch:
+                    self.process_item(InfinibandItem.SWITCH, data_chunk)
+                else:
+                    self.process_item(InfinibandItem.CA, data_chunk)
+
             for counter_name in self.counter_info:
                 yield self.metrics[counter_name]
             for gauge_name in self.gauge_info:
                 yield self.metrics[gauge_name]
-        else:
+
+        except ParsingError as e:
+            logging.error(e)
             scrape_with_errors = True
 
         scrape_duration.add_metric([], time.time() - scrape_start)
