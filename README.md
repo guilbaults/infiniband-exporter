@@ -12,8 +12,8 @@ This exporter takes 3 seconds to collect the information of 60+ IB switches, and
 ## Requirements
 
 * Python
- * prometheus-client
-* `ibqueryerrors`
+* prometheus-client
+* ibqueryerrors
 
 ## Usage
 Metrics are exported on the chosen HTTP port, events like counter reset will be on STDOUT. 
@@ -71,7 +71,17 @@ InfiniBand exporter metrics are prefixed with "infiniband_".
 ### Channel Adapter (CA) and Switches
 
 For a better readability the counter metric names are shown here in upper camel case.  
-But when exported the names are displayed in lowercase and the suffix "\_total" is appended.
+But when exported the names are displayed in lowercase and the suffix "\_total" is appended.  
+
+Labels list:  
+
+* component
+* local\_name
+* local\_guid
+* local\_port
+* remote\_guid
+* remote\_port
+* remote\_name
 
 #### Error Counter
 
