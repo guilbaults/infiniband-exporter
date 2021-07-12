@@ -196,6 +196,12 @@ class InfinibandCollector(object):
         self.bad_status_error_pattern = r'src\/query\_smp\.c\:[\d]+\; (?:mad|umad) \((DR path .*) Attr .*\) bad status ([\d]+); (.*)'  # noqa: E501
         self.bad_status_error_prog = re.compile(self.bad_status_error_pattern)
 
+        self.query_failed_error_metric_name = 'infiniband_query_failed_error'
+        self.query_failed_error_metric_help = 'Failed query catched from STDERR by ibqueryerrors.'
+        self.query_failed_error_metric_labels = ['name', 'host', 'lid', 'port']
+        self.query_failed_error_pattern = r'ibwarn: \[\d+\] query_and_dump: (\w+) query failed on (\w+), Lid (\d+) port (\d+)'
+        self.query_failed_error_prog = re.compile(self.query_failed_error_pattern)
+
         self.ibqueryerrors_header_regex_str = r'^Errors for (?:0[x][\da-f]+ )?\"(.*)\"$'
 
         self.switch_all_ports_pattern = re.compile(r'\s*GUID 0[x][\da-f]+ port ALL: (?:\[.*\])+')
@@ -247,13 +253,20 @@ class InfinibandCollector(object):
             self.bad_status_error_metric_help,
             labels=self.bad_status_error_metric_labels)
 
-        stderr_metrics = [bad_status_error_metric]
+        query_failed_error_metric = GaugeMetricFamily(
+            self.query_failed_error_metric_name,
+            self.query_failed_error_metric_help,
+            labels=self.query_failed_error_metric_labels)
+
+        stderr_metrics = [bad_status_error_metric, query_failed_error_metric]
         error = False
 
         for line in stderr.splitlines():
             logging.debug('STDERR line: {}'.format(line))
 
             if self.process_bad_status_error(line, bad_status_error_metric):
+                pass
+            elif self.process_query_failed_error(line, query_failed_error_metric):
                 pass
             else:
                 if not error:
@@ -262,6 +275,24 @@ class InfinibandCollector(object):
                               line))
 
         return stderr_metrics, error
+
+
+    def process_query_failed_error(self, line, query_failed_error_metric):
+
+        result = self.query_failed_error_prog.match(line)
+
+        if result:
+
+            query_failed_error_metric.add_metric(
+                [result.group(1),   # name
+                 result.group(2),   # host
+                 result.group(3),   # lid
+                 result.group(4)],  # port
+                 1)
+
+            return True
+
+        return False
 
     def process_bad_status_error(self, line, bad_status_error_metric):
 
