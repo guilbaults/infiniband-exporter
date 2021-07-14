@@ -205,23 +205,23 @@ class InfinibandCollector(object):
         self.mad_rpc_recv_failed_pattern = r'ibwarn: \[\d+\] _do_madrpc: recv failed: [\w\s]+'
         self.mad_rpc_recv_failed_prog = re.compile(self.mad_rpc_recv_failed_pattern)
 
-        self.mad_rpc_failed_metric_name = 'infininband_mad_rpc_failed'
-        self.mad_rpc_failed_metric_help = 'ibwarn_mad_rpc error catched from STDERR by ibqueryerrors.'
-        self.mad_rpc_failed_metric_labels = ['portid']
-        self.mad_rpc_failed_pattern = r'ibwarn: \[\d+\] mad_rpc: _do_madrpc failed; dport \(([\w;\s]+)\)'
-        self.mad_rpc_failed_prog = re.compile(self.mad_rpc_failed_pattern)
+        self.mad_rpc_failed_error_metric_name = 'infininband_mad_rpc_failed_error'
+        self.mad_rpc_failed_error_metric_help = 'ibwarn_mad_rpc error catched from STDERR by ibqueryerrors.'
+        self.mad_rpc_failed_error_metric_labels = ['portid']
+        self.mad_rpc_failed_error_pattern = r'ibwarn: \[\d+\] mad_rpc: _do_madrpc failed; dport \(([\w;\s]+)\)'
+        self.mad_rpc_failed_error_prog = re.compile(self.mad_rpc_failed_error_pattern)
 
-        self.query_cap_mask_metric_name = 'infininband_query_cap_mask'
-        self.query_cap_mask_metric_help = 'ibwarn_query_cap_mask error catched from STDERR by ibqueryerrors.'
-        self.query_cap_mask_metric_labels = ['counter_name', 'local_name', 'portid', 'port']
-        self.query_cap_mask_pattern = r'ibwarn: \[\d+\] query_cap_mask: (\w+) query failed on ([\w\s]+), ([\w;\s]+) port (\d+)'
-        self.query_cap_mask_prog = re.compile(self.query_cap_mask_pattern)
+        self.query_cap_mask_error_metric_name = 'infininband_query_cap_mask_error'
+        self.query_cap_mask_error_metric_help = 'ibwarn_query_cap_mask error catched from STDERR by ibqueryerrors.'
+        self.query_cap_mask_error_metric_labels = ['counter_name', 'local_name', 'portid', 'port']
+        self.query_cap_mask_error_pattern = r'ibwarn: \[\d+\] query_cap_mask: (\w+) query failed on ([\w\s]+), ([\w;\s]+) port (\d+)'
+        self.query_cap_mask_error_prog = re.compile(self.query_cap_mask_error_pattern)
 
-        self.print_errors_metric_name = 'infininband_print_errors'
-        self.print_errors_metric_help = 'ibwarn_print_error catched from STDERR by ibqueryerrors.'
-        self.print_errors_metric_labels = ['counter_name', 'local_name', 'portid', 'port']
-        self.print_errors_pattern = r'ibwarn: \[\d+\] print_errors: (\w+) query failed on ([\w\s]+), ([\w;\s]+) port (\d+)'
-        self.print_errors_prog = re.compile(self.print_errors_pattern)
+        self.print_error_metric_name = 'infininband_print_error'
+        self.print_error_metric_help = 'ibwarn_print_error catched from STDERR by ibqueryerrors.'
+        self.print_error_metric_labels = ['counter_name', 'local_name', 'portid', 'port']
+        self.print_error_pattern = r'ibwarn: \[\d+\] print_errors: (\w+) query failed on ([\w\s]+), ([\w;\s]+) port (\d+)'
+        self.print_error_prog = re.compile(self.print_error_pattern)
 
         self.ibqueryerrors_header_regex_str = r'^Errors for (?:0[x][\da-f]+ )?\"(.*)\"$'
 
@@ -279,27 +279,27 @@ class InfinibandCollector(object):
             self.query_failed_error_metric_help,
             labels=self.query_failed_error_metric_labels)
 
-        mad_rpc_failed_metric = GaugeMetricFamily(
-            self.mad_rpc_failed_metric_name,
-            self.mad_rpc_failed_metric_help,
-            labels=self.mad_rpc_failed_metric_labels)
+        mad_rpc_failed_error_metric = GaugeMetricFamily(
+            self.mad_rpc_failed_error_metric_name,
+            self.mad_rpc_failed_error_metric_help,
+            labels=self.mad_rpc_failed_error_metric_labels)
 
-        query_cap_mask_metric = GaugeMetricFamily(
-            self.query_cap_mask_metric_name,
-            self.query_cap_mask_metric_help,
-            labels=self.query_cap_mask_metric_labels)
+        query_cap_mask_error_metric = GaugeMetricFamily(
+            self.query_cap_mask_error_metric_name,
+            self.query_cap_mask_error_metric_help,
+            labels=self.query_cap_mask_error_metric_labels)
 
-        print_errors_metric = GaugeMetricFamily(
-            self.print_errors_metric_name,
-            self.print_errors_metric_help,
-            labels=self.print_errors_metric_labels)
+        print_error_metric = GaugeMetricFamily(
+            self.print_error_metric_name,
+            self.print_error_metric_help,
+            labels=self.print_error_metric_labels)
 
         stderr_metrics = [
             bad_status_error_metric,
             query_failed_error_metric,
-            mad_rpc_failed_metric,
-            query_cap_mask_metric,
-            print_errors_metric]
+            mad_rpc_failed_error_metric,
+            query_cap_mask_error_metric,
+            print_error_metric]
 
         error = False
 
@@ -312,11 +312,11 @@ class InfinibandCollector(object):
                 pass
             elif self.mad_rpc_recv_failed_prog.match(line):
                 pass
-            elif self.process_mad_rpc_failed(line, mad_rpc_failed_metric):
+            elif self.process_mad_rpc_failed(line, mad_rpc_failed_error_metric):
                 pass
-            elif self.process_query_cap_mask(line, query_cap_mask_metric):
+            elif self.process_query_cap_mask(line, query_cap_mask_error_metric):
                 pass
-            elif self.process_print_errors(line, print_errors_metric):
+            elif self.process_print_errors(line, print_error_metric):
                 pass
             else:
                 if not error:
@@ -362,7 +362,7 @@ class InfinibandCollector(object):
 
     def process_mad_rpc_failed(self, line, error):
 
-        result = self.mad_rpc_failed_prog.match(line)
+        result = self.mad_rpc_failed_error_prog.match(line)
 
         if result:
 
@@ -376,7 +376,7 @@ class InfinibandCollector(object):
 
     def process_query_cap_mask(self, line, error):
 
-        result = self.query_cap_mask_prog.match(line)
+        result = self.query_cap_mask_error_prog.match(line)
 
         if result:
 
@@ -394,7 +394,7 @@ class InfinibandCollector(object):
 
     def process_print_errors(self, line, error):
 
-        result = self.print_errors_prog.match(line)
+        result = self.print_error_prog.match(line)
 
         if result:
 
