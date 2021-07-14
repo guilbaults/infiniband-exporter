@@ -606,7 +606,7 @@ class InfinibandCollector(object):
 
             if process_stderr:
                 ibqueryerrors_stderr = process_stderr.decode("utf-8")
-                logging.error(ibqueryerrors_stderr)
+                logging.debug(ibqueryerrors_stderr)
 
                 stderr_metrics, error = self.build_stderr_metrics(
                     ibqueryerrors_stderr)
