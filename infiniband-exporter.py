@@ -199,7 +199,7 @@ class InfinibandCollector(object):
         self.query_failed_error_metric_name = 'infiniband_query_failed_error'
         self.query_failed_error_metric_help = 'Failed query catched from STDERR by ibqueryerrors.'
         self.query_failed_error_metric_labels = ['counter_name', 'local_name', 'lid', 'port']
-        self.query_failed_error_pattern = r'ibwarn: \[\d+\] query_and_dump: (\w+) query failed on (\w+), Lid (\d+) port (\d+)'
+        self.query_failed_error_pattern = r'ibwarn: \[\d+\] query_and_dump: (\w+) query failed on (.*), Lid (\d+) port (\d+)'
         self.query_failed_error_prog = re.compile(self.query_failed_error_pattern)
 
         self.mad_rpc_recv_failed_pattern = r'ibwarn: \[\d+\] _do_madrpc: recv failed: [\w\s]+'
@@ -214,13 +214,13 @@ class InfinibandCollector(object):
         self.query_cap_mask_error_metric_name = 'infininband_query_cap_mask_error'
         self.query_cap_mask_error_metric_help = 'ibwarn_query_cap_mask error catched from STDERR by ibqueryerrors.'
         self.query_cap_mask_error_metric_labels = ['counter_name', 'local_name', 'portid', 'port']
-        self.query_cap_mask_error_pattern = r'ibwarn: \[\d+\] query_cap_mask: (\w+) query failed on ([\w\s]+), ([\w;\s]+) port (\d+)'
+        self.query_cap_mask_error_pattern = r'ibwarn: \[\d+\] query_cap_mask: (\w+) query failed on (.*), ([\w;\s]+) port (\d+)'
         self.query_cap_mask_error_prog = re.compile(self.query_cap_mask_error_pattern)
 
         self.print_error_metric_name = 'infininband_print_error'
         self.print_error_metric_help = 'ibwarn_print_error catched from STDERR by ibqueryerrors.'
         self.print_error_metric_labels = ['counter_name', 'local_name', 'portid', 'port']
-        self.print_error_pattern = r'ibwarn: \[\d+\] print_errors: (\w+) query failed on ([\w\s]+), ([\w;\s]+) port (\d+)'
+        self.print_error_pattern = r'ibwarn: \[\d+\] print_errors: (\w+) query failed on (.*), ([\w;\s]+) port (\d+)'
         self.print_error_prog = re.compile(self.print_error_pattern)
 
         self.ibqueryerrors_header_regex_str = r'^Errors for (?:0[x][\da-f]+ )?\"(.*)\"$'
