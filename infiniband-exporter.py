@@ -205,19 +205,19 @@ class InfinibandCollector(object):
         self.mad_rpc_recv_failed_pattern = r'ibwarn: \[\d+\] _do_madrpc: recv failed: [\w\s]+'
         self.mad_rpc_recv_failed_prog = re.compile(self.mad_rpc_recv_failed_pattern)
 
-        self.mad_rpc_failed_error_metric_name = 'infininband_mad_rpc_failed_error'
+        self.mad_rpc_failed_error_metric_name = 'infiniband_mad_rpc_failed_error'
         self.mad_rpc_failed_error_metric_help = 'ibwarn_mad_rpc error catched from STDERR by ibqueryerrors.'
         self.mad_rpc_failed_error_metric_labels = ['portid']
         self.mad_rpc_failed_error_pattern = r'ibwarn: \[\d+\] mad_rpc: _do_madrpc failed; dport \(([\w;\s]+)\)'
         self.mad_rpc_failed_error_prog = re.compile(self.mad_rpc_failed_error_pattern)
 
-        self.query_cap_mask_error_metric_name = 'infininband_query_cap_mask_error'
+        self.query_cap_mask_error_metric_name = 'infiniband_query_cap_mask_error'
         self.query_cap_mask_error_metric_help = 'ibwarn_query_cap_mask error catched from STDERR by ibqueryerrors.'
         self.query_cap_mask_error_metric_labels = ['counter_name', 'local_name', 'portid', 'port']
         self.query_cap_mask_error_pattern = r'ibwarn: \[\d+\] query_cap_mask: (\w+) query failed on (.*), ([\w;\s]+) port (\d+)'
         self.query_cap_mask_error_prog = re.compile(self.query_cap_mask_error_pattern)
 
-        self.print_error_metric_name = 'infininband_print_error'
+        self.print_error_metric_name = 'infiniband_print_error'
         self.print_error_metric_help = 'ibwarn_print_error catched from STDERR by ibqueryerrors.'
         self.print_error_metric_labels = ['counter_name', 'local_name', 'portid', 'port']
         self.print_error_pattern = r'ibwarn: \[\d+\] print_errors: (\w+) query failed on (.*), ([\w;\s]+) port (\d+)'
