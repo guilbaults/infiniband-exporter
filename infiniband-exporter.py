@@ -251,20 +251,18 @@ class InfinibandCollector(object):
             switch_name = guid
 
         if self.can_reset_counter:
-            logging.info('Reseting counters on "{sw}" port {port} due to {r}'.format(  # noqa: E501
-                sw=switch_name,
-                port=port,
-                r=reason
-            ))
+            logging.info('Reseting counters on %s port %s due to %s',  # noqa: E501
+                         switch_name,
+                         port,
+                         reason)
             process = subprocess.Popen(['perfquery', '-R', '-G', guid, port],
                                        stdout=subprocess.PIPE)
             process.communicate()
         else:
-            logging.warning('Counters on "{sw}" port {port} is maxed out on {r}'.format(  # noqa: E501
-                sw=switch_name,
-                port=port,
-                r=reason
-            ))
+            logging.warning('Counters on %s port %s is maxed out on %s',  # noqa: E501
+                            switch_name,
+                            port,
+                            reason)
 
     def build_stderr_metrics(self, stderr):
         logging.debug('Processing stderr errors retrieved by ibqueryerrors')
@@ -304,7 +302,7 @@ class InfinibandCollector(object):
         error = False
 
         for line in stderr.splitlines():
-            logging.debug('STDERR line: {}'.format(line))
+            logging.debug('STDERR line: %s', line)
 
             if self.process_bad_status_error(line, bad_status_error_metric):
                 pass
@@ -321,7 +319,7 @@ class InfinibandCollector(object):
             else:
                 if not error:
                     error = True
-                logging.error('Could not process line from STDERR: {}'.format(line))
+                logging.error('Could not process line from STDERR: %s', line)
 
         return stderr_metrics, error
 
@@ -553,7 +551,7 @@ class InfinibandCollector(object):
                     self.reset_counter(guid, port, counter)
             except KeyError:
                 self.scrape_with_errors = True
-                logging.error('Missing description for counter metric: {}'.format(counter))
+                logging.error('Missing description for counter metric: %s', counter)
 
 
     def collect(self):
@@ -753,12 +751,10 @@ var NODE_NAME_MAP')
         sys.exit(1)
 
     if args.node_name_map:
-        logging.debug('Using node-name-map provided in args: {}'.format(
-            args.node_name_map))
+        logging.debug('Using node-name-map provided in args: %s', args.node_name_map)
         node_name_map = args.node_name_map
     elif 'NODE_NAME_MAP' in os.environ:
-        logging.debug('Using NODE_NAME_MAP provided in env vars: {}'.format(
-            os.environ['NODE_NAME_MAP']))
+        logging.debug('Using NODE_NAME_MAP provided in env vars: %s', os.environ['NODE_NAME_MAP'])
         node_name_map = os.environ['NODE_NAME_MAP']
     else:
         logging.debug('No node-name-map was provided')
