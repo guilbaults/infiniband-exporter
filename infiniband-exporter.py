@@ -13,6 +13,8 @@ from prometheus_client.core import CounterMetricFamily, GaugeMetricFamily
 from prometheus_client import make_wsgi_app
 from wsgiref.simple_server import make_server, WSGIRequestHandler
 
+VERSION = "0.0.4"
+
 class ParsingError(Exception):
     pass
 
@@ -734,8 +736,18 @@ var NODE_NAME_MAP')
         help='ibqueryerrors ca_name for different infiniband ports')
     parser.add_argument("--verbose", help="increase output verbosity",
                         action="store_true")
+    parser.add_argument('-v',
+                        '--version',
+                        dest='print_version',
+                        required=False,
+                        action='store_true',
+                        help='Print version number')
 
     args = parser.parse_args()
+
+    if args.print_version:
+        print(f"Version {VERSION}")
+        sys.exit()
 
     if args.verbose:
         logging.basicConfig(level=logging.DEBUG,
