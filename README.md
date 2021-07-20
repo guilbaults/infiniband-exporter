@@ -64,13 +64,13 @@ InfiniBand exporter metrics are prefixed with "infiniband_".
 
 ### Errors from STDERR by ibqueryerrors
 
-| Name                    | Description                                                       |
-| ----------------------- | ----------------------------------------------------------------- |
-| bad\_status\_error      | Bad status error catched from STDERR by ibqueryerrors.            |
-| query\_failed\_error    | Failed query catched from STDERR by ibqueryerrors.                |
-| mad\_rpc\_failed\_error | ibwarn_mad_rpc error catched from STDERR by ibqueryerrors.        |
-| query\_cap\_mask\_error | ibwarn_query_cap_mask error catched from STDERR by ibqueryerrors. |
-| print\_error            | ibwarn_print_error catched from STDERR by ibqueryerrors.          |
+| Name                    | Labels                                   | Description                                                         |
+| ----------------------- | ---------------------------------------- | ------------------------------------------------------------------- |
+| bad\_status\_error      | path, status, error                      | Bad status error catched from STDERR by ibqueryerrors.              |
+| query\_failed\_error    | counter\_name, local\_name, lid, port    | Failed query catched from STDERR by ibqueryerrors.                  |
+| mad\_rpc\_failed\_error | portid                                   | ibwarn\_mad\_rpc error catched from STDERR by ibqueryerrors.        |
+| query\_cap\_mask\_error | counter\_name, local\_name, portid, port | bwarn\_query\_cap\_mask error catched from STDERR by ibqueryerrors. |
+| print\_error            | counter\_name, local\_name, portid, port | ibwarn\_print\_error catched from STDERR by ibqueryerrors.          |
 
 ### Channel Adapter (CA) and Switches
 
