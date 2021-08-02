@@ -11,8 +11,8 @@ This exporter takes 3 seconds to collect the information of 60+ IB switches, and
 
 ## Requirements
 
-* Python
-* prometheus-client
+* python3
+* prometheus-client (need to be installed with pip)
 * ibqueryerrors
 
 ## Usage
