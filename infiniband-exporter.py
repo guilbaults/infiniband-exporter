@@ -61,6 +61,14 @@ class InfinibandCollector(object):
                 'severity': 'Error',
                 'bits': 16,
             },
+            # detailed description of xmitDiscards: (Head of Queue) timeout https://community.mellanox.com/s/article/howto-prevent-infiniband-credit-loops
+            # possibly interesting to also monitor a lot of similar performance metrics that have been introduced in the kernel at the same time https://patchwork.kernel.org/project/linux-rdma/patch/0F3DDD57-C1A9-4304-A20F-7027BF8F590B@llnl.gov/
+            'PortSwHOQLifetimeLimitDiscards': {
+                'help': 'The number of packets dropped by running in a head-of-Queue timeout'
+                        'often caused by congestions, possibly by credit Loops.',
+                'severity': 'Informative',
+                'bits': 16,
+            },
             'PortXmitWait': {
                 'help': 'The number of ticks during which the port had data '
                         'to transmit but no data was sent during the entire '
