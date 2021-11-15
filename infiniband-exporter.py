@@ -65,7 +65,7 @@ class InfinibandCollector(object):
             'PortSwHOQLifetimeLimitDiscards': {
                 'help': 'The number of packets dropped by running in a head-of-Queue timeout'
                         'often caused by congestions, possibly by credit Loops.',
-                'severity': 'Informative',
+                'severity': 'Error',
                 'bits': 16,
             },
             'PortXmitWait': {
