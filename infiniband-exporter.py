@@ -13,7 +13,7 @@ from prometheus_client.core import CounterMetricFamily, GaugeMetricFamily
 from prometheus_client import make_wsgi_app
 from wsgiref.simple_server import make_server, WSGIRequestHandler
 
-VERSION = "0.0.4"
+VERSION = "0.0.5"
 
 class ParsingError(Exception):
     pass
@@ -59,6 +59,13 @@ class InfinibandCollector(object):
                 'help': 'Total number of outbound packets discarded by the '
                         'port because the port is down or congested.',
                 'severity': 'Error',
+                'bits': 16,
+            },
+            # detailed description of xmitDiscards: (Head of Queue) timeout https://community.mellanox.com/s/article/howto-prevent-infiniband-credit-loops
+            'PortSwHOQLifetimeLimitDiscards': {
+                'help': 'The number of packets dropped by running in a head-of-Queue timeout'
+                        'often caused by congestions, possibly by credit Loops.',
+                'severity': 'Informative',
                 'bits': 16,
             },
             'PortXmitWait': {
