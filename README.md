@@ -89,20 +89,21 @@ Labels list:
 
 #### Error Counter
 
-| Name                        | Description                                                                                                           |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| LinkDownedCounter           | Total number of times the Port Training state machine has failed the link error recovery process and downed the link. |
-| SymbolErrorCounter          | Total number of minor link errors detected on one or more physical lanes.                                             |
-| PortXmitDiscards            | Total number of outbound packets discarded by the port because the port is down or congested.                         |
-| PortBufferOverrunErrors     | Total number of packets received on the part discarded due to buffer overrrun.                                        |
-| PortLocalPhysicalErrors     | Total number of packets received with physical error like CRC error.                                                  |
-| PortRcvRemotePhysicalErrors | Total number of packets marked with the EBP delimiter received on the port.                                           |
-| PortInactiveDiscards        | Total number of packets discarded due to the port being in the inactive state.                                        |
-| PortDLIDMappingErrors       | Total number of packets on the port that could not be forwared by the switch due to DLID mapping errors.              |
-| LinkErrorRecoveryCounter    | Total number of times the Port Training state machine has successfully completed the link error recovery process.     |
-| LocalLinkIntegrityErrors    | The number of times that the count of local physical errors exceeded the threshold specified by LocalPhyErrors.       |
-| VL15Dropped                 | The number of incoming VL15 packets dropped due to resource limitations (for example, lack of buffers) in the port.   |
-| PortNeighborMTUDiscards     | Total outbound packets discarded by the port because packet length exceeded the neighbor MTU.                         |
+| Name                          | Description                                                                                                           |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| LinkDownedCounter             | Total number of times the Port Training state machine has failed the link error recovery process and downed the link. |
+| SymbolErrorCounter            | Total number of minor link errors detected on one or more physical lanes.                                             |
+| PortXmitDiscards              | Total number of outbound packets discarded by the port because the port is down or congested.                         |
+| PortSwHOQLifetimeLimitDiscards| Total number of outbound packets discarded because they ran into a head-of-Queue timeout.                             |
+| PortBufferOverrunErrors       | Total number of packets received on the part discarded due to buffer overrrun.                                        |
+| PortLocalPhysicalErrors       | Total number of packets received with physical error like CRC error.                                                  |
+| PortRcvRemotePhysicalErrors   | Total number of packets marked with the EBP delimiter received on the port.                                           |
+| PortInactiveDiscards          | Total number of packets discarded due to the port being in the inactive state.                                        |
+| PortDLIDMappingErrors         | Total number of packets on the port that could not be forwared by the switch due to DLID mapping errors.              |
+| LinkErrorRecoveryCounter      | Total number of times the Port Training state machine has successfully completed the link error recovery process.     |
+| LocalLinkIntegrityErrors      | The number of times that the count of local physical errors exceeded the threshold specified by LocalPhyErrors.       |
+| VL15Dropped                   | The number of incoming VL15 packets dropped due to resource limitations (for example, lack of buffers) in the port.   |
+| PortNeighborMTUDiscards       | Total outbound packets discarded by the port because packet length exceeded the neighbor MTU.                         |
 
 #### Informative Counter
 
