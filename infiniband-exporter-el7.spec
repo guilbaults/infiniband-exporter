@@ -1,6 +1,6 @@
 Name:	  infiniband-exporter
 Version:  0.0.5
-%global gittag 0.0.4
+%global gittag 0.0.5
 Release:  1%{?dist}
 Summary:  Prometheus exporter for a Infiniband Fabric
 
@@ -45,6 +45,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_unitdir}/infiniband-exporter.service
 
 %changelog
+* Mon Nov 22 2021 Simon Guilbault <simon.guilbault@calculquebec.ca> 0.0.5-1
+- Implement PortSwHOQLifetimeLimitDiscards metric
 * Mon Aug 02 2021 Simon Guilbault <simon.guilbault@calculquebec.ca> 0.0.4-1
 - Deprecated python2
 - Adding client HCA stats
