@@ -13,7 +13,7 @@ from prometheus_client.core import CounterMetricFamily, GaugeMetricFamily
 from prometheus_client import make_wsgi_app
 from wsgiref.simple_server import make_server, WSGIRequestHandler
 
-VERSION = "0.0.5"
+VERSION = "0.0.6"
 
 class ParsingError(Exception):
     pass
@@ -52,6 +52,21 @@ class InfinibandCollector(object):
             'SymbolErrorCounter': {
                 'help': 'Total number of minor link errors detected on one '
                         'or more physical lanes.',
+                'severity': 'Error',
+                'bits': 16,
+            },
+            'PortXmitConstraintErrors': {
+                'help': 'Total number of packets not transmitted from the switch physical port',
+                'severity': 'Error',
+                'bits': 16,
+            },
+            'PortMalformedPktErrors': {
+                'help': 'Total number of malformed packets',
+                'severity': 'Error',
+                'bits': 16,
+            },
+            'PortSwLifetimeLimitDiscards': {
+                'help': 'Total number of lifetime limit discards',
                 'severity': 'Error',
                 'bits': 16,
             },
