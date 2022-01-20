@@ -93,6 +93,9 @@ Labels list:
 | ----------------------------- | --------------------------------------------------------------------------------------------------------------------- |
 | LinkDownedCounter             | Total number of times the Port Training state machine has failed the link error recovery process and downed the link. |
 | SymbolErrorCounter            | Total number of minor link errors detected on one or more physical lanes.                                             |
+| PortXmitConstraintErrors      | Total number of packets not transmitted from the switch physical port
+| PortMalformedPktErrors        | Total number of malformed packets
+| PortSwLifetimeLimitDiscards   | Total number of lifetime limit discards
 | PortXmitDiscards              | Total number of outbound packets discarded by the port because the port is down or congested.                         |
 | PortSwHOQLifetimeLimitDiscards| Total number of outbound packets discarded because they ran into a head-of-Queue timeout.                             |
 | PortBufferOverrunErrors       | Total number of packets received on the part discarded due to buffer overrrun.                                        |

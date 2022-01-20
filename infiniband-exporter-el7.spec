@@ -1,6 +1,6 @@
 Name:	  infiniband-exporter
-Version:  0.0.5
-%global gittag 0.0.5
+Version:  0.0.6
+%global gittag 0.0.6
 Release:  1%{?dist}
 Summary:  Prometheus exporter for a Infiniband Fabric
 
