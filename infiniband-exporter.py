@@ -203,6 +203,21 @@ class InfinibandCollector(object):
                         'packet length exceeded the neighbor MTU.',
                 'severity': 'Error',
                 'bits': 16,
+            },
+            'PortRcvConstraintErrors': {
+                'help': 'Total number of packets received on the port that are discarded '
+                        'for any of the following reasons: - FilterRawInbound is true and '
+                        'packet is raw - PartitionEnforcementInbound is true and packet '
+                        'fails partition key check, IP version check, or transport header '
+                        'version check.',
+                'severity': 'Error',
+                'bits': 16,
+            },
+            'ExcessiveBufferOverrunErrors': {
+                'help': 'The number of times that consecutive flow control update periods '
+                        'had at least one overrun error.',
+                'severity': 'Error',
+                'bits': 16,
             }
         }
         self.gauge_info = {
