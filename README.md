@@ -107,6 +107,8 @@ Labels list:
 | LocalLinkIntegrityErrors      | The number of times that the count of local physical errors exceeded the threshold specified by LocalPhyErrors.       |
 | VL15Dropped                   | The number of incoming VL15 packets dropped due to resource limitations (for example, lack of buffers) in the port.   |
 | PortNeighborMTUDiscards       | Total outbound packets discarded by the port because packet length exceeded the neighbor MTU.                         |
+| PortRcvConstraintErrors       | Total number of packets received on the port that are discarded for any of the following reasons: - FilterRawInbound is true and packet is raw - PartitionEnforcementInbound is true and packet fails partition key check, IP version check, or transport header version check. |
+| ExcessiveBufferOverrunErrors  | The number of times that consecutive flow control update periods had at least one overrun error. |
 
 #### Informative Counter
 
