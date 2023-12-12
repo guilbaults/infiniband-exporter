@@ -6,7 +6,6 @@ After=network.target
 Type=simple
 EnvironmentFile=-/etc/sysconfig/infiniband-exporter.conf
 ExecStart=/usr/bin/infiniband-exporter
-PIDFile=/var/run/infiniband-exporter.pid
 KillMode=process
 
 [Install]
