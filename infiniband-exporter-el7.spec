@@ -1,6 +1,6 @@
 Name:	  infiniband-exporter
-Version:  0.0.6
-%global gittag 0.0.6
+Version:  0.0.7
+%global gittag 0.0.7
 Release:  1%{?dist}
 Summary:  Prometheus exporter for a Infiniband Fabric
 
@@ -45,6 +45,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_unitdir}/infiniband-exporter.service
 
 %changelog
+* Tue Dec 12 2023 Simon Guilbault <simon.guilbault@calculquebec.ca> 0.0.7-1
+- Building RPM for EL9
+* Thu Jan 21 2022 Simon Guilbault <simon.guilbault@calculquebec.ca> 0.0.6-1
+- Adding PortXmitConstraintErrors, PortMalformedPktErrors and PortSwLifetimeLimitDiscards
 * Mon Nov 22 2021 Simon Guilbault <simon.guilbault@calculquebec.ca> 0.0.5-1
 - Implement PortSwHOQLifetimeLimitDiscards metric
 * Mon Aug 02 2021 Simon Guilbault <simon.guilbault@calculquebec.ca> 0.0.4-1
