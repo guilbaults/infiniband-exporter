@@ -44,6 +44,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_unitdir}/infiniband-exporter.service
 
 %changelog
+* Tue Dec 12 2023 Simon Guilbault <simon.guilbault@calculquebec.ca> 0.0.6-1
+- Building RPM for EL9
 * Mon Nov 22 2021 Simon Guilbault <simon.guilbault@calculquebec.ca> 0.0.5-1
 - Implement PortSwHOQLifetimeLimitDiscards metric
 * Mon Aug 02 2021 Simon Guilbault <simon.guilbault@calculquebec.ca> 0.0.4-1
