@@ -12,7 +12,6 @@ BuildArch:      noarch
 BuildRequires:	systemd
 Requires:       python3
 Requires:	infiniband-diags
-Requires:	python3-prometheus_client
 
 %description
 Prometheus exporter for a Infiniband fabric. This exporter only need to be installed on one server connected to the fabric, it will collect all the ports statistics on all the switches.
